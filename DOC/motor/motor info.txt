@@ -1,0 +1,18 @@
+
+step length 3.75 deg
+96 steps per turn
+60 minutes in 1 hour
+1.6 steps per minute
+1 minute is 0.625 step long
+
+
+step length 0.9 deg
+400 steps per turn
+60 minutes in 1 hour
+6.66 steps per minute
+1 minute is 0.15 step long
+
+
+
+400 steps = 1 hour = 60 min = 3600 s
+speed = 400 steps / 3600 s = 0,11111 step / s

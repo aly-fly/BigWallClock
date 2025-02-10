@@ -1,0 +1,2 @@
+      // T = 1/((1/Tnominal) + log((Rpullup * adcVal / (adcMax – adcVal)) / Rnominal) / B) – 273.15
+      TempC = 1/((1/298.15) + Ln(((10000 * ADCvalue) / (ADCmax - ADCvalue)) / 10000) / 3435) - 273.15;
