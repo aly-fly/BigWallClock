@@ -66,7 +66,7 @@
 
 #define HIGH_POWER      50
 #define LOW_POWER       25
-#define OVERCURRENT_LVL  1
+#define OVERCURRENT_LVL  2
 #define STALL_LVL        5
 #define SPEED_LIMIT     50
 
@@ -76,7 +76,9 @@
 #define TEMP_SENS_R25       10000
 #define TEMP_SENS_BETA      3984      // part number NTCALUG01T103G201 
 #define TEMP_SENS_RPULLUP   10000
-#define TEMP_SENS_OFFSET    0.0
+#define TEMP_SENS_OFFSET    -3.0
+
+#define MOTOR_TEMP_MAX        55      // °C
 
 // ************ LED *********************
 

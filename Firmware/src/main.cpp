@@ -13,6 +13,7 @@
 #include "TempSensor.h"
 #include "Aksim2_encoder_uart2.h"
 #include "LEDs.h"
+#include "Logger.h"
 
 void setup()
 {
@@ -27,7 +28,6 @@ void setup()
     delay(100);
   }
   Serial.println();
-
   Serial.println("Project: github.com/aly-fly/BigWallClock");
   Serial.print("Version: ");
   Serial.println(VERSION);
@@ -90,7 +90,7 @@ void setup()
   Serial.println("  P       -> Encoder position?");
   Serial.println("  S       -> Motor status?");
   Serial.println();
-  Serial.println("Clock running.");
+  Log("Clock running.");
 
   LED_off();
   LED_color(0, LED_GRNdim, true);
@@ -198,7 +198,7 @@ void loop()
   } // get time
   else
   {
-    log_e("Getting current time failed!");   
+    Log("Getting current time failed!");   
   }
 
   if (!MotorGetStatusOk())
@@ -209,12 +209,12 @@ void loop()
   MotorTemperature = TempSensorRead();
   if (abs(MotorTempLastLogged - MotorTemperature) > 2)
   {
-    Serial.printf("Motor temp = %f\n", MotorTemperature);
+    Log("Motor temperature = %f C", MotorTemperature);
     MotorTempLastLogged = MotorTemperature;
   }
-  if (MotorTemperature > 50)
+  if (MotorTemperature > MOTOR_TEMP_MAX)
   {
-    Serial.printf("Motor overheating! Temp = %f\n", MotorTemperature);
+    Log("Motor overheating! Temperature = %f C", MotorTemperature);
     ErrorCounter += 2;
   }
 
@@ -227,12 +227,12 @@ void loop()
     ErrorCounter = 0;
   if ((ErrorCounter > 0) && (!ErrorCounterLogged))
   {
-    Serial.printf("%d:%d:%d  ErrorCounter increasing!\n", CurrentHour, CurrentMinute, CurrentSecond);
+    Log("ErrorCounter increasing!");
     ErrorCounterLogged = true;
   }
   if ((ErrorCounter == 0) && (ErrorCounterLogged))
   {
-    Serial.printf("%d:%d:%d  ErrorCounter 0.\n", CurrentHour, CurrentMinute, CurrentSecond);
+    Log("ErrorCounter 0.");
     ErrorCounterLogged = false;
   }
 
@@ -258,14 +258,14 @@ void loop()
   // if clock is not correctly adjusted in 100 seconds or motor error is read 10 times then disable motor for 500 seconds (cool down)
   if ((ErrorCounter > 3000) && ClockEnabled && !TestMode)
   {
-    log_e("%d:%d:%d  Error counter exceeded threshold. Clock disabled.",  CurrentHour, CurrentMinute, CurrentSecond);
+    Log("Error counter exceeded threshold. Clock disabled.");
     EnableMotor(false);
     ClockEnabled = false;
     LED_color(0, LED_REDbright, true);
   }
   if ((ErrorCounter < 10) && !ClockEnabled && !TestMode)
   {
-    log_e("%d:%d:%d  Error counter ok. Clock enabled.",  CurrentHour, CurrentMinute, CurrentSecond);
+    Log("Error counter ok. Clock enabled.");
     EnableMotor(true);
     ClockEnabled = true;
     LED_color(0, LED_GRNdim, true);

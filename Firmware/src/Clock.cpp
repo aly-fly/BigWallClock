@@ -4,13 +4,15 @@
 #include <time.h>
 #include "__CONFIG.h"
 #include "myWiFi.h"
+#include "Logger.h"
+
 
 unsigned long LastTimeClockSynced = 0; // data is not valid
 
 
 // Required for WiFiClientSecure and for checks the validity date of the certificate. 
 void setClock(void) {
-  Serial.println("setClock()");
+  Log("setClock()");
 
   /*
   if (!inHomeLAN) {
@@ -52,7 +54,7 @@ void setClock(void) {
 
   configTime(GMT_OFFSET*60*60, DST_OFFSET*60*60, TIME_SERVER1, TIME_SERVER2);
 
-  Serial.print("NTP time sync");
+  Log("NTP time sync");
   time_t nowSecs = time(nullptr);
   while (nowSecs < 8 * 3600 * 2) {
     delay(500);
@@ -63,11 +65,12 @@ void setClock(void) {
 
   Serial.println();
   struct tm timeinfo;
-  gmtime_r(&nowSecs, &timeinfo);
-  Serial.print("Current time: ");
-  Serial.print(asctime(&timeinfo));
+  //gmtime_r(&nowSecs, &timeinfo);
+  getLocalTime(&timeinfo);
+  Log("Current time: %s", asctime(&timeinfo));
   
   LastTimeClockSynced = millis();
+  GetCurrentTime(); // fill global variables
 }
 
 /* https://cplusplus.com/reference/ctime/tm/
@@ -84,7 +87,7 @@ tm_isdst	int	Daylight Saving Time flag
 */
 
 // global vars
-int CurrentYear, CurrentMonth, CurrentWeekday, CurrentDay, CurrentHour, CurrentMinute, CurrentSecond;  
+int CurrentYear = 0, CurrentMonth, CurrentWeekday, CurrentDay, CurrentHour, CurrentMinute, CurrentSecond;  
 
 // fill global variables
 bool GetCurrentTime(void) {

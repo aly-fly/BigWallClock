@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include "__CONFIG.h"
+#include "Logger.h"
 
 uint8_t RxBuffer[1 + 58];
 String dbgStr;
@@ -60,7 +61,7 @@ bool queryEncoder(uint8_t command, uint8_t DataLength, bool printData)
 bool encoderInit(void)
 {
     bool result = false;
-    log_i("Encoder init...");
+    Log("Encoder init...");
     Serial2.begin(115200, SERIAL_8N1, RXD2pin, TXD2pin);
     delay(20);
     Serial2.flush();
@@ -76,17 +77,17 @@ bool encoderInit(void)
         int idx = dbgStr.indexOf("MB029SFA17MFNT00");
         if (idx > 0)
         {
-            log_i("Encoder found and data is correct.");
+            Log("Encoder found and data is correct.");
             result = true;
         }
         else
         {
-            log_e("Encoder didn't return correct identification! idx = %d", idx);
+            Log("Encoder didn't return correct identification! idx = %d", idx);
         }
     }
     else
     {
-        log_e("No useful data returned from encoder!");
+        Log("No useful data returned from encoder!");
     }
     return result;
 }
@@ -109,7 +110,7 @@ bool encoderRead(bool PrintData = false)
 
             if ((EncoderDetailedStatus != 0) || PrintData)
             {
-                Serial.printf(" MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X\n", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
+                Log(" MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X\n", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
                 String sDetStatus;
                 if ((EncoderDetailedStatus & 0x8000) > 0)
                     sDetStatus.concat("Multiturn error  ");
@@ -140,18 +141,18 @@ bool encoderRead(bool PrintData = false)
                 if ((EncoderDetailedStatus & 0x0001) > 0)
                     sDetStatus.concat("Acceleration error");
                 if (sDetStatus.length() > 0)
-                    Serial.println(sDetStatus);
+                    Log("  %s", sDetStatus.c_str());
             }
             result = true;
         }
         else
         {
-            log_e("Incorrect header returned!");
+            Log("Incorrect header returned!");
         }
     }
     else
     {
-        log_e("No useful data returned from encoder!");
+        Log("No useful data returned from encoder!");
     }
     return result;
 
@@ -201,7 +202,7 @@ bool EncoderSetMT(uint16_t NewMTvalue)
 
 bool EncoderSetZeroHere(void)
 {
-    log_i("Setting encoder zero position...");
+    Log("Setting encoder zero position...");
     bool result = true;
     bool fncRes;
 

@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include "__CONFIG.h"
 #include "motorDriver.h"
+#include "Logger.h"
 
 
 SPIClass myVSPI (VSPI);
@@ -17,7 +18,7 @@ bool HiPowerMode;
 bool MotorInit() 
 {
   bool result = false;
-  Serial.println("powerSTEP01 control initialising...");
+  Log("powerSTEP01 control initialising...");
 
   // Library does not initialize pins - let's do it here.
   pinMode(nSTBY_nRESET_PIN, OUTPUT);
@@ -41,19 +42,19 @@ bool MotorInit()
   // Configure powerSTEP
   driver.SPIPortConnect(&myVSPI); // give library the SPI port
 
-  Serial.println("Testing comm...");
-  Serial.printf("Status = 0x%4X\n", driver.getStatus());
+  Log("Testing comm...");
+  Log("Status = 0x%4X", driver.getStatus());
 
   byte bOCT = driver.getOCThreshold();
-  Serial.printf("OC Threshold = %d (must be 8 after reset)\n", bOCT);
+  Log("OC Threshold = %d (must be 8 after reset)", bOCT);
   if (bOCT == 8)  // must be 8 after reset
   {
-    Serial.println("Communication is ok.");
+    Log("Communication is ok.");
     result = true;
   }
   else
   {
-    Serial.println("Communication is NOT GOOD!!");
+    Log("Communication is NOT GOOD!!");
     result = false;
   }
 
@@ -142,7 +143,7 @@ end;
   driver.setAcc(150); // full steps/s^2 acceleration
   driver.setDec(150); // full steps/s^2 deceleration
 
-  Serial.println("Voltage mode");
+  Log("Voltage mode");
   driver.hardHiZ();
   driver.setVoltageMode();
   driver.configStepMode(STEP_FS_128); // options: 1, 1/2, 1/4, 1/8, 1/16, 1/32, 1/64, 1/128; full steps = STEP_FS,
@@ -162,7 +163,7 @@ end;
   
   EnableMotor(true);
 
-  Serial.println("Motor driver initialisation complete.");
+  Log("Motor driver initialisation complete.");
   return result;
 }
 
@@ -192,17 +193,13 @@ bool MotorGetStatusOk(bool PrintAlways)
   if (!(iStatus & STATUS_nBUSY))     ActiveErrors.concat("  BUSY");  
   if ( (iStatus & STATUS_HIZ))       ActiveErrors.concat("  HiZ");  
 
-  if (PrintAlways)
-  {
-    Serial.println(ActiveErrors);
-  }
   // active high flags
   MotorOk = (iStatus & 0b0001100010000000) == 0; //thermal, cmd_err
   // active low flags
   MotorOk = MotorOk & ((iStatus & 0b1110001000000000) == 0b1110001000000000); // stall, OCD, UVLO
-  if (!MotorOk)
+  if ((!MotorOk) || (PrintAlways))
   {
-    Serial.println("Motor Error(s): " + ActiveErrors);
+    Log("Motor Error(s): %s",  ActiveErrors.c_str());
   }
   return MotorOk;
 }
@@ -264,7 +261,7 @@ void oneMotion(int dist) {
 void EnableMotor (bool Enable)
 {
   if (!Enable) driver.hardHiZ();
-  Serial.printf ("Motor enabled: %d\n", Enable);
+  Log ("Motor enabled: %d", Enable);
 }
 
 //================================================================================================================
@@ -276,7 +273,7 @@ void MotorTest()
   driver.setDec(50); // full steps/s^2 deceleration
 
 
-  Serial.println("Voltage mode");
+  Log("Voltage mode");
   driver.hardHiZ();
   driver.setVoltageMode();
   driver.configStepMode(STEP_FS_128);
@@ -297,7 +294,7 @@ void MotorTest()
   delay(500);
 
 /*
-  Serial.println("Current mode");
+  Log x("Current mode");
   driver.hardHiZ();
   driver.setCurrentMode();
   driver.configStepMode(STEP_FS_16);  // max allowed for current mode

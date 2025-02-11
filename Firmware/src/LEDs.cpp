@@ -4,6 +4,7 @@
 
 #include "__CONFIG.h"
 #include "esp32-hal-rmt.h"
+#include "Logger.h"
 
 //======================================================================================================================
 
@@ -30,10 +31,10 @@ void LED_init(void)
 
     if (MyRMT == NULL)
     {
-        Serial.println("RMT init failed\n");
+        Log("RMT init failed\n");
     }
     float tickTime = rmtSetTick(MyRMT, 100); // 1 tick = 0.1 us (divisor = 8)
-    log_i("RMT Tick time = %f\n", tickTime);
+    Log("RMT Tick time = %f", tickTime);
 
     // reset code duration defaults to 50us
     LEDtxReset[0].level0 = 0;

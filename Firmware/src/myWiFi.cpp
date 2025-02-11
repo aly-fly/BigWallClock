@@ -6,6 +6,7 @@
 #include <esp_sntp.h>
 #include "esp_wps.h"
 #include "myWiFi.h"
+#include "Logger.h"
 
 WiFiMulti wifiMulti;
 
@@ -15,21 +16,19 @@ void WiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info){
   switch(event){
     case ARDUINO_EVENT_WIFI_STA_START:
       //WifiState = disconnected;
-      Serial.println("Station Mode Started");
+      Log("Station Mode Started");
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: // IP not yet assigned
-      Serial.println("Connected to AP: " + String(WiFi.SSID()));
+      Log("Connected to AP: %s", WiFi.SSID());
       break;     
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       myIP = WiFi.localIP();
-      Serial.print("Got IP: ");
-      Serial.println(myIP);
+      Log("Got IP: %s", myIP.toString());
       //WifiState = connected;
       break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       //WifiState = disconnected;
-      Serial.print("WiFi lost connection. Reason: ");
-      Serial.println(info.wifi_sta_disconnected.reason);
+      Log("WiFi lost connection. Reason: %d", info.wifi_sta_disconnected.reason);
       break;
     default:
       break;
@@ -46,7 +45,7 @@ bool WifiInit(void)  {
   uint8_t baseMac[6];
   esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
 */  
-
+/*
   WiFi.mode(WIFI_OFF);
   Serial.print("My old MAC = ");
   Serial.println(WiFi.macAddress());
@@ -61,7 +60,7 @@ bool WifiInit(void)  {
 
   Serial.print("My new MAC = ");
   Serial.println(WiFi.macAddress());
-
+*/
 
   WiFi.mode(WIFI_STA);
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);  
@@ -69,47 +68,44 @@ bool WifiInit(void)  {
   WiFi.onEvent(WiFiEvent);
 
 #ifdef WIFI_SSID2
-  Serial.println("Multi WiFi start...");
+  Log("Multi WiFi start...");
   wifiMulti.addAP(WIFI_SSID1, WIFI_PASSWD1);
   wifiMulti.addAP(WIFI_SSID2, WIFI_PASSWD2);
 #ifdef WIFI_SSID3
   wifiMulti.addAP(WIFI_SSID3, WIFI_PASSWD3);
 #endif
   if(wifiMulti.run() != WL_CONNECTED) {
-    Serial.println("\r\nWiFi connection timeout!");
-    DisplayText("\nTIMEOUT!", CLRED);
+    Log("WiFi connection timeout!");
     delay(2000);
     //WifiState = disconnected;
     return false; // exit loop, exit procedure, continue startup
   }
 #else
-  Serial.print("WiFi start");
+  Log("WiFi start...");
   WiFi.begin(WIFI_SSID1, WIFI_PASSWD1); 
   unsigned long StartTime = millis();
   while ((WiFi.status() != WL_CONNECTED)) {
     delay(500);
-    Serial.print(".");
+    //Serial.print(".");
     if ((millis() - StartTime) > (WIFI_CONNECT_TIMEOUT_SEC * 1000)) {
-      Serial.println("\r\nWiFi connection timeout!");
-      delay(2000);
+      //Serial.println();
+      Log("WiFi connection timeout!");
+      //delay(2000);
       //WifiState = disconnected;
       return false; // exit loop, exit procedure, continue startup
     }
   }
 #endif
   
-  Serial.println();
-  Serial.print("Connected to ");
-  Serial.println(WiFi.SSID());
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());  
+  //Serial.println();
+  Log("WiFi connected. SSID: %s, IP: %s", WiFi.SSID(), WiFi.localIP().toString());
   delay(200);
   return true;
 }
 
 void WifiReconnectIfNeeded(void) {
   if (!WiFi.isConnected()) {
-    Serial.println("Attempting WiFi reconnection...");
+    Log("Attempting WiFi reconnection...");
     WiFi.reconnect();
   }    
 }
