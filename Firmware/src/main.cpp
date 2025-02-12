@@ -14,6 +14,7 @@
 #include "Aksim2_encoder_uart2.h"
 #include "LEDs.h"
 #include "Logger.h"
+#include "fileSystem.h"
 
 void setup()
 {
@@ -38,6 +39,7 @@ void setup()
   LED_color(0, LED_BLUbright, true);
   delay(200);
 
+  fileSystem_init();
   LED_color(1, LED_ORANGE, true);
   if (encoderInit())
     LED_color(1, LED_BLUbright, true);
@@ -417,6 +419,11 @@ void loop()
         MotorGetStatusOk(true);
         break;
 
+      case 'L':
+        Serial.println("-> LOG dump");
+        DumpContentsOfTheLog();
+        break;
+
       default:
         Serial.println("-> Unknown");
         break;
@@ -426,6 +433,8 @@ void loop()
   } // serial available
 
   WifiReconnectIfNeeded();
+
+  loggerPurgeToFile();
 
   delay(100);
 

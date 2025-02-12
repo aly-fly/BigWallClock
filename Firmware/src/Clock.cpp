@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <esp_sntp.h>
 #include <time.h>
+#include "Clock.h"
 #include "__CONFIG.h"
 #include "myWiFi.h"
 #include "Logger.h"

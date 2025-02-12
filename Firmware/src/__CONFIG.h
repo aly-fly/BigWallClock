@@ -84,4 +84,8 @@
 
 #define WS2812_LED_PIN   GPIO_NUM_32
 
+
+
+#define LOG_FILE_wPATH "/log.txt"
+
 #endif /* __CONFIG_H_ */

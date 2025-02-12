@@ -1,5 +1,7 @@
 
 void int_log (void);
+void loggerPurgeToFile(void);
+
 
 extern char int_logbuffer[100];
 
