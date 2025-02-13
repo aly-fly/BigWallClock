@@ -110,36 +110,36 @@ bool encoderRead(bool PrintData = false)
 
             if ((EncoderDetailedStatus != 0) || PrintData)
             {
-                Log(" MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X\n", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
+                Log(" MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
                 String sDetStatus;
                 if ((EncoderDetailedStatus & 0x8000) > 0)
                     sDetStatus.concat("Multiturn error  ");
                 if ((EncoderDetailedStatus & 0x4000) > 0)
                     sDetStatus.concat("Signal clipping error  ");
                 if ((EncoderDetailedStatus & 0x2000) > 0)
-                    sDetStatus.concat("Signal clipping warning");
+                    sDetStatus.concat("Signal clipping warning  ");
                 if ((EncoderDetailedStatus & 0x1000) > 0)
-                    sDetStatus.concat("Sensor error");
+                    sDetStatus.concat("Sensor error  ");
                 if ((EncoderDetailedStatus & 0x0800) > 0)
-                    sDetStatus.concat("Sensor read error");
+                    sDetStatus.concat("Sensor read error  ");
                 if ((EncoderDetailedStatus & 0x0400) > 0)
-                    sDetStatus.concat("Config error");
+                    sDetStatus.concat("Config error  ");
                 if ((EncoderDetailedStatus & 0x0080) > 0)
-                    sDetStatus.concat("Signal high warning");
+                    sDetStatus.concat("Signal high warning  ");
                 if ((EncoderDetailedStatus & 0x0040) > 0)
-                    sDetStatus.concat("Signal low warning");
+                    sDetStatus.concat("Signal low warning  ");
                 if ((EncoderDetailedStatus & 0x0020) > 0)
-                    sDetStatus.concat("Signal lost error");
+                    sDetStatus.concat("Signal lost error  ");
                 if ((EncoderDetailedStatus & 0x0010) > 0)
-                    sDetStatus.concat("Temperature warning");
+                    sDetStatus.concat("Temperature warning  ");
                 if ((EncoderDetailedStatus & 0x0008) > 0)
-                    sDetStatus.concat("Supply error");
+                    sDetStatus.concat("Supply error  ");
                 if ((EncoderDetailedStatus & 0x0004) > 0)
-                    sDetStatus.concat("System error");
+                    sDetStatus.concat("System error  ");
                 if ((EncoderDetailedStatus & 0x0002) > 0)
-                    sDetStatus.concat("Magnetic error");
+                    sDetStatus.concat("Magnetic error  ");
                 if ((EncoderDetailedStatus & 0x0001) > 0)
-                    sDetStatus.concat("Acceleration error");
+                    sDetStatus.concat("Acceleration error  ");
                 if (sDetStatus.length() > 0)
                     Log("  %s", sDetStatus.c_str());
             }
@@ -216,37 +216,7 @@ bool EncoderSetZeroHere(void)
     fncRes = EncoderTransferCommand(9);
     Serial.printf("  OK : %d\n", fncRes);
     result = result && fncRes;
-
-    // Clear any MT error
-    Serial.println("- Clear MT error");
-    fncRes = EncoderSetMT(0);
-    Serial.printf("  OK : %d\n", fncRes);
-    result = result && fncRes;
-
-    // Read position
-    Serial.println("- Read position");
-    fncRes = encoderRead(true);
-    Serial.printf("  OK : %d\n", fncRes);
-    result = result && fncRes;
-
-    // Set new zero with a tiny offset to prevent MT jumping
-    Serial.println("- Set new offset");
-    uint32_t NewOffset = EncoderPosST - 5;
-    TxBuffer[4] = 'Z';
-    TxBuffer[5] = (NewOffset >> 24) & 0xFF;
-    TxBuffer[6] = (NewOffset >> 16) & 0xFF;
-    ;
-    TxBuffer[7] = (NewOffset >> 8) & 0xFF;
-    TxBuffer[8] = NewOffset & 0xFF;
-    fncRes = EncoderTransferCommand(9);
-    Serial.printf("  OK : %d\n", fncRes);
-    result = result && fncRes;
-
-    // Read position
-    Serial.println("- Read position");
-    fncRes = encoderRead(true);
-    Serial.printf("  OK : %d\n", fncRes);
-    result = result && fncRes;
+    delay(10);
 
     // Save to Flash
     Serial.println("- Save to flash");
@@ -261,9 +231,57 @@ bool EncoderSetZeroHere(void)
     fncRes = EncoderSetMT(0);
     Serial.printf("  OK : %d\n", fncRes);
     result = result && fncRes;
+    delay(10);
 
     // Read position
     Serial.println("- Read position");
+    fncRes = encoderRead(true);
+    delay(10);
+    fncRes = encoderRead(true);
+    Serial.printf("  OK : %d\n", fncRes);
+    result = result && fncRes;
+    delay(10);
+
+    // Set new zero with a tiny offset to prevent MT jumping
+    Serial.println("- Set new offset");
+    uint32_t NewOffset = EncoderPosST - 5;
+    TxBuffer[4] = 'Z';
+    TxBuffer[5] = (NewOffset >> 24) & 0xFF;
+    TxBuffer[6] = (NewOffset >> 16) & 0xFF;
+    TxBuffer[7] = (NewOffset >> 8) & 0xFF;
+    TxBuffer[8] = NewOffset & 0xFF;
+    fncRes = EncoderTransferCommand(9);
+    Serial.printf("  OK : %d\n", fncRes);
+    result = result && fncRes;
+    delay(10);
+
+    // Read position
+    Serial.println("- Read position");
+    fncRes = encoderRead(true);
+    delay(10);
+    fncRes = encoderRead(true);
+    Serial.printf("  OK : %d\n", fncRes);
+    result = result && fncRes;
+    delay(10);
+
+    // Save to Flash
+    Serial.println("- Save to flash");
+    TxBuffer[4] = 'c';
+    fncRes = EncoderTransferCommand(5);
+    Serial.printf("  OK : %d\n", fncRes);
+    result = result && fncRes;
+    delay(500);
+
+    // Clear any MT error
+    Serial.println("- Clear MT error");
+    fncRes = EncoderSetMT(0);
+    Serial.printf("  OK : %d\n", fncRes);
+    result = result && fncRes;
+    delay(10);
+
+    // Read position
+    Serial.println("- Read position");
+    fncRes = encoderRead(true);
     fncRes = encoderRead(true);
     Serial.printf("  OK : %d\n", fncRes);
     result = result && fncRes;

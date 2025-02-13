@@ -34,7 +34,7 @@ void LED_init(void)
         Log("RMT init failed\n");
     }
     float tickTime = rmtSetTick(MyRMT, 100); // 1 tick = 0.1 us (divisor = 8)
-    Log("RMT Tick time = %f", tickTime);
+    Log("RMT Tick time = %.1f", tickTime);
 
     // reset code duration defaults to 50us
     LEDtxReset[0].level0 = 0;

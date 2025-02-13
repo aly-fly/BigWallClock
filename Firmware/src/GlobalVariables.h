@@ -5,5 +5,7 @@
 #include <stdint.h>
 
 extern bool NightMode;
+extern bool ClockEnabled;
+extern bool TestMode;
 
 #endif //__GLOBALVARIABLES_H_

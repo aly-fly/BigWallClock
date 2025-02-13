@@ -2,9 +2,11 @@
 #include <Arduino.h>
 #include "Clock.h"
 #include "fileSystem.h"
+#include "GlobalVariables.h"
+#include "TcpSocket.h"
 
 char int_logbuffer[150];
-char timebuf[15];
+char timebuf[20];
 String CollectForSaving;
 unsigned long LastTimeSaved = 0;
 
@@ -13,13 +15,19 @@ void int_log(void)
     if (CurrentYear != 0) // time is initialized
     {
         GetCurrentTime();
-        sprintf(timebuf, "[%02d:%02d:%02d] ", CurrentHour, CurrentMinute, CurrentSecond);
+        sprintf(timebuf, "[%d.%d. %02d:%02d:%02d] ", CurrentDay, CurrentMonth, CurrentHour, CurrentMinute, CurrentSecond);
         Serial.print(timebuf);
-        CollectForSaving.concat(timebuf);
+        if (!TestMode)
+            CollectForSaving.concat(timebuf);
     }
     Serial.println(int_logbuffer);
-    CollectForSaving.concat(int_logbuffer);
-    CollectForSaving.concat('\n');
+    if (!TestMode)
+    {
+        CollectForSaving.concat(int_logbuffer);
+        CollectForSaving.concat('\n');
+    }
+    SendToSocket(int_logbuffer);
+    SendToSocket("\n");
 
     if ((CollectForSaving.length() > 1000) && FSready)
     {
@@ -33,9 +41,9 @@ void int_log(void)
         CollectForSaving.clear(); // mem leak protection
 }
 
-void loggerPurgeToFile(void)
+void loggerPurgeToFile(bool immediatelly = false)
 {
-    if (((millis() - LastTimeSaved) > 30000) && FSready && (CollectForSaving.length() > 50))
+    if ((((millis() - LastTimeSaved) > 30000) && FSready && (CollectForSaving.length() > 150)) || immediatelly)
     {
         if (saveToFile(&CollectForSaving))
         {

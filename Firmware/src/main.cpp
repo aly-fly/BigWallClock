@@ -15,6 +15,7 @@
 #include "LEDs.h"
 #include "Logger.h"
 #include "fileSystem.h"
+#include "TcpSocket.h"
 
 void setup()
 {
@@ -66,6 +67,8 @@ void setup()
   LED_color(4, LED_BLUbright, true);
   delay(200);
 
+  startTcpSocket();
+
   /*
     String sPingIP;
     IPAddress pingIP;
@@ -91,6 +94,8 @@ void setup()
   Serial.println("  1..9C   -> Constant speed");
   Serial.println("  P       -> Encoder position?");
   Serial.println("  S       -> Motor status?");
+  Serial.println(" LL       -> Print log contents");
+  Serial.println(" DL       -> Delete log file");
   Serial.println();
   Log("Clock running.");
 
@@ -111,8 +116,7 @@ float speedAdj, speedAdjFiltered, speedMotor;
 bool filterValid = false;
 int ErrorCounter = 0;
 bool ErrorCounterLogged = false;
-bool ClockEnabled = true;
-bool TestMode = false;
+
 String sSerialCmd;
 int LEDlastUpdate = 0; // limit refresh rate
 int LEDsequence = 0;
@@ -200,7 +204,7 @@ void loop()
   } // get time
   else
   {
-    Log("Getting current time failed!");   
+    Log("Getting current time failed!");
   }
 
   if (!MotorGetStatusOk())
@@ -211,12 +215,12 @@ void loop()
   MotorTemperature = TempSensorRead();
   if (abs(MotorTempLastLogged - MotorTemperature) > 2)
   {
-    Log("Motor temperature = %f C", MotorTemperature);
+    Log("Motor temperature = %.1f C", MotorTemperature);
     MotorTempLastLogged = MotorTemperature;
   }
   if (MotorTemperature > MOTOR_TEMP_MAX)
   {
-    Log("Motor overheating! Temperature = %f C", MotorTemperature);
+    Log("Motor overheating! Temperature = %.1f C", MotorTemperature);
     ErrorCounter += 2;
   }
 
@@ -273,10 +277,8 @@ void loop()
     LED_color(0, LED_GRNdim, true);
   }
 
-
   //========================================================================================================
-  
-  
+
   if (CurrentHour != LastHour)
   {
     NightMode = ((CurrentHour >= NIGHT_TIME) || (CurrentHour < DAY_TIME));
@@ -324,16 +326,20 @@ void loop()
     LEDlastUpdate = CurrentSecond;
   }
 
-
   //========================================================================================================
-  
-
 
   // RX commands
   if (Serial.available() > 0)
   {
     sSerialCmd.concat(Serial.readString()); // add new data to the existing queue
-    int pp = sSerialCmd.indexOf('\r');      // find first command
+  }
+  if (DataAvailableInSocket())
+  {
+    sSerialCmd.concat(ReadFromSocket()); // add new data to the existing queue
+  }
+  if (sSerialCmd.length() >= 2)
+  {
+    int pp = sSerialCmd.indexOf('\r'); // find first command
     if (pp > 0)
     {
       char Cmd = sSerialCmd.charAt(pp - 1);
@@ -353,8 +359,8 @@ void loop()
           uint16_t val = (param1 * 10) + param2;
           if ((val >= 0) && (val <= 11))
           {
-          Serial.printf("  New MT = %d\n", val);
-          EncoderSetMT(val);
+            Serial.printf("  New MT = %d\n", val);
+            EncoderSetMT(val);
           }
         }
         encoderRead(true); // print new pos value
@@ -420,8 +426,20 @@ void loop()
         break;
 
       case 'L':
-        Serial.println("-> LOG dump");
-        DumpContentsOfTheLog();
+        Serial.println("-> LOG");
+        if (pp > 1)
+        {
+          byte param = sSerialCmd.charAt(pp - 2);
+          switch (param)
+          {
+          case 'L':
+            ReadAndPrintContentsOfTheLog();
+            break;
+          case 'D':
+            DeleteLogFile();
+            break;
+          }
+        }
         break;
 
       default:
@@ -432,9 +450,11 @@ void loop()
     }
   } // serial available
 
-  WifiReconnectIfNeeded();
+  // WifiReconnectIfNeeded();
 
   loggerPurgeToFile();
+
+  LoopSocketServer();
 
   delay(100);
 

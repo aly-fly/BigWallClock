@@ -2,6 +2,7 @@
 #include "LittleFS.h"
 #include "fsTools.h"
 #include "__CONFIG.h"
+#include "Logger.h"
 
 bool FSready = false;
 
@@ -29,8 +30,14 @@ bool saveToFile(String *TextToWrite)
   size_t fileSize = 0;
   bool result = false;
 
-  // Photo file name
-  Serial.printf("File name: %s\n", LOG_FILE_wPATH);
+  fileSize = getFileSize(LOG_FILE_wPATH);
+  if (fileSize > 2500000)
+  {
+    Serial.printf("File too big. (%u B)  Can't save data.\n", (uint32_t)(fileSize));
+    return true; // clear buffer of collected data
+  }
+
+  //Serial.printf("File name: %s\n", LOG_FILE_wPATH);
   int64_t Time1 = esp_timer_get_time();
   File file = LittleFS.open(LOG_FILE_wPATH, FILE_APPEND);
 
@@ -62,8 +69,10 @@ bool saveToFile(String *TextToWrite)
 }
 
 
-void DumpContentsOfTheLog(void)
+void ReadAndPrintContentsOfTheLog(void)
 {
+  loggerPurgeToFile(true); // first save data from the RAM 
+
   size_t fileSize = getFileSize(LOG_FILE_wPATH);
   Serial.printf("File size: %u B\n", (uint32_t)(fileSize));
 
@@ -82,9 +91,23 @@ void DumpContentsOfTheLog(void)
       Serial.print(c);
     }
 
-    Serial.println("=== EOF ===");
+    Serial.println("============================= EOF ================================== ");
   }
   file.close();
+}
+
+
+void DeleteLogFile(void)
+{
+  Serial.print("Deleting log file...");
+  if (LittleFS.remove(LOG_FILE_wPATH))
+  {
+    Serial.println("ok.");
+  }
+  else
+  {
+    Serial.println("FAIL!");
+  }
 }
 
 

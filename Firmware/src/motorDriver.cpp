@@ -173,7 +173,17 @@ bool MotorGetStatusOk(bool PrintAlways)
   String ActiveErrors;
   int iStatus = driver.getStatus();
   // if returned value is 0, reading is probably incorrect. Read again.
-  if (iStatus == 0) iStatus = driver.getStatus();
+  if (iStatus == 0) 
+  {
+    delay(5);
+    iStatus = driver.getStatus();
+  }
+  // this flag should not be set; reading is probably incorrect. Read again.
+  if (!(iStatus & STATUS_nUVLO_ADC))
+  {
+    delay(5);
+    iStatus = driver.getStatus();
+  }  
 
   ActiveErrors = "Status = 0x" + String(iStatus, HEX);  
   if (!(iStatus & STATUS_nSTALL_A))  ActiveErrors.concat("  STALL_A"); // STALL_A and STALL_B flags are forced low when a stall condition is detected on bridge A or bridge B 

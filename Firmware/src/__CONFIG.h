@@ -12,7 +12,8 @@
 
 // ************ General config *********************
 #define DEBUG_OUTPUT
-//#define DEBUG_OUTPUT_DATA  // include received data
+#define DBG_SOCKET_ENABLED 1
+#define DBG_SOCKET_PORT 21
 
 #define DEVICE_NAME "WallClock"
 #define WIFI_CONNECT_TIMEOUT_SEC 240  // How long to wait for WiFi
@@ -65,7 +66,7 @@
 #define VSPI_MOSI          GPIO_NUM_23
 
 #define HIGH_POWER      50
-#define LOW_POWER       25
+#define LOW_POWER       33
 #define OVERCURRENT_LVL  2
 #define STALL_LVL        5
 #define SPEED_LIMIT     50

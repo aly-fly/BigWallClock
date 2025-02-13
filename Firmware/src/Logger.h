@@ -1,7 +1,6 @@
 
 void int_log (void);
-void loggerPurgeToFile(void);
-
+void loggerPurgeToFile(bool immediatelly = false);
 
 extern char int_logbuffer[100];
 
