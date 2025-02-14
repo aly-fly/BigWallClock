@@ -17,6 +17,7 @@ void int_log(void)
         GetCurrentTime();
         sprintf(timebuf, "[%d.%d. %02d:%02d:%02d] ", CurrentDay, CurrentMonth, CurrentHour, CurrentMinute, CurrentSecond);
         Serial.print(timebuf);
+        SendToSocket(timebuf);
         if (!TestMode)
             CollectForSaving.concat(timebuf);
     }
@@ -28,6 +29,7 @@ void int_log(void)
     }
     SendToSocket(int_logbuffer);
     SendToSocket("\n");
+    int_logbuffer[0] = '\0';
 
     if ((CollectForSaving.length() > 1500) && FSready)
     {
@@ -39,6 +41,19 @@ void int_log(void)
     }
     if (CollectForSaving.length() > 5000)
         CollectForSaving.clear(); // mem leak protection
+}
+
+void int_logNS(void)
+{
+    Serial.print(int_logbuffer);
+    SendToSocket(int_logbuffer);
+    int_logbuffer[0] = '\0';
+}
+
+void LogNSc(char cc)
+{
+    Serial.print(cc);
+    SendToSocket(cc);
 }
 
 void loggerPurgeToFile(bool immediatelly = false)

@@ -92,17 +92,7 @@ void setup()
 
   Serial.println("INIT FINISHED.");
   Serial.println();
-  Serial.println("Serial commands:");
-  Serial.println("  00..12M -> Hour preset");
-  Serial.println("  Z       -> Encoder zero");
-  Serial.println("  1..0E   -> Enable clock");
-  Serial.println("  1..0T   -> Test mode");
-  Serial.println("  1..9C   -> Constant speed");
-  Serial.println("  P       -> Encoder position?");
-  Serial.println("  G       -> Encoder air gap? (loop)");
-  Serial.println("  S       -> Motor status?");
-  Serial.println(" LL       -> Print log contents");
-  Serial.println(" DL       -> Delete log file");
+  Serial.println(SERIAL_COMMANDS_LIST);
   Serial.println();
   Log("Clock running.");
 
@@ -149,7 +139,7 @@ void loop()
           CurrentHour12 = (CurrentHour % 12);
           TimeCurrent = (CurrentHour12 * CPR) + (CurrentMinute * CPR) / 60 + ((CurrentSecond * CPR) / 60 / 60);
           if (TestMode)
-            Serial.printf("MT12 = %d; Hr = %d; Hr12 = %d;\n", EncoderPosMT12, CurrentHour, CurrentHour12);
+            LogNS("MT12 = %d; Hr = %d; Hr12 = %d;\n", EncoderPosMT12, CurrentHour, CurrentHour12);
 
           delta = TimeCurrent - TimeDisplayed;
           // handle overflow over 0:00 and 12:00
@@ -174,7 +164,7 @@ void loop()
             speedAdjFiltered = (speedAdj * 0.05) + (speedAdjFiltered * 0.95);
           }
           if (TestMode)
-            Serial.printf("Encoder = %d; Time = %d; delta = %d; speedAdj = %f; Filtered = %f\n", TimeDisplayed, TimeCurrent, delta, speedAdj, speedAdjFiltered);
+            LogNS("Encoder = %d; Time = %d; delta = %d; speedAdj = %f; Filtered = %f\n", TimeDisplayed, TimeCurrent, delta, speedAdj, speedAdjFiltered);
 
         } // encoder no error
         else
@@ -220,7 +210,7 @@ void loop()
   }
 
   MotorTemperature = TempSensorRead();
-  if (abs(MotorTempLastLogged - MotorTemperature) > 2)
+  if (abs(MotorTempLastLogged - MotorTemperature) > 3)
   {
     Log("Motor temperature = %.1f C", MotorTemperature);
     MotorTempLastLogged = MotorTemperature;
@@ -238,7 +228,7 @@ void loop()
   ErrorCounter--;
   if (ErrorCounter < 0)
     ErrorCounter = 0;
-  if ((ErrorCounter > 0) && (!ErrorCounterLogged))
+  if ((ErrorCounter > 20) && (!ErrorCounterLogged))
   {
     Log("ErrorCounter increasing!");
     ErrorCounterLogged = true;
@@ -350,13 +340,13 @@ void loop()
     if (pp > 0)
     {
       char Cmd = sSerialCmd.charAt(pp - 1);
-      Serial.println("=====================================================");
-      Serial.print("Command received: ");
-      Serial.println(Cmd);
+      LogNS("=====================================================\n");
+      LogNS("Command received: %c\n", Cmd);
+
       switch (Cmd)
       {
       case 'M':
-        Serial.println("-> Multiturn preset");
+        LogNS("-> Multiturn preset\n");
         if (pp > 2)
         {
           char param1 = sSerialCmd.charAt(pp - 3);
@@ -366,7 +356,7 @@ void loop()
           uint16_t val = (param1 * 10) + param2;
           if ((val >= 0) && (val <= 11))
           {
-            Serial.printf("  New MT = %d\n", val);
+            LogNS("  New MT = %d\n", val);
             EncoderSetMT(val);
           }
         }
@@ -374,13 +364,13 @@ void loop()
         break;
 
       case 'Z':
-        Serial.println("-> Encoder zero");
+        LogNS("-> Encoder zero\n");
         EncoderSetZeroHere();
         encoderRead(true); // print new pos value
         break;
 
       case 'E':
-        Serial.println("-> Enable clock");
+        LogNS("-> Enable clock\n");
         if (pp > 1)
         {
           char param = sSerialCmd.charAt(pp - 2);
@@ -391,22 +381,22 @@ void loop()
         break;
 
       case 'T':
-        Serial.println("-> Test mode");
+        LogNS("-> Test mode\n");
         if (pp > 1)
         {
           char param = sSerialCmd.charAt(pp - 2);
           TestMode = (param == '1');
         }
         // debug
-        Serial.println("[IDLE] Free memory: " + String(esp_get_free_heap_size()) + " bytes");
+        LogNS("[IDLE] Free memory: %u bytes", esp_get_free_heap_size());
         multi_heap_info_t info;
         heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); // internal RAM, memory capable to store data or to create new task
-        Serial.println("[IDLE] Largest available block: " + String(info.largest_free_block) + " bytes");
-        Serial.println("[IDLE] Minimum free ever: " + String(info.minimum_free_bytes) + " bytes");
+        LogNS("[IDLE] Largest available block: %u bytes", info.largest_free_block);
+        LogNS("[IDLE] Minimum free ever: %u bytes", info.minimum_free_bytes);
         break;
 
       case 'C':
-        Serial.println("-> Constant speed");
+        LogNS("-> Constant speed\n");
         if (pp > 1)
         {
           byte param = sSerialCmd.charAt(pp - 2);
@@ -416,21 +406,21 @@ void loop()
             ClockEnabled = false;
             TestMode = true;
             int speed = 1 << param;
-            Serial.printf("  Speed = %d\n", speed);
+            LogNS("  Speed = %d\n", speed);
             MoveConstSpeed((float)speed, TestMode);
           }
         }
         break;
 
       case 'P':
-        Serial.println("-> Encoder position, status, air gap?");
+        LogNS("-> Encoder position, status, air gap?\n");
         encoderRead(true);
         encoderReadAirGap();
         break;
 
       case 'G':
       {
-        Serial.println("-> Encoder air gap?");
+        LogNS("-> Encoder air gap?\n");
         bool oldTM = TestMode;
         TestMode = true; // do not save messages
         for (int i = 0; i < 240; i++)
@@ -444,12 +434,14 @@ void loop()
       }
 
       case 'S':
-        Serial.println("-> Motor status?");
+        LogNS("-> Motor status?\n");
         MotorGetStatusOk(true);
+        MotorTemperature = TempSensorRead();
+        Log("Motor temperature = %.1f C", MotorTemperature);
         break;
 
       case 'L':
-        Serial.println("-> LOG");
+        LogNS("-> LOG\n");
         if (pp > 1)
         {
           byte param = sSerialCmd.charAt(pp - 2);
@@ -466,12 +458,12 @@ void loop()
         break;
 
       default:
-        Serial.println("-> Unknown");
+        LogNS("-> Unknown\n");
         break;
       }
       sSerialCmd.clear(); // process only one command in one main loop
-    }
-  } // serial available
+    } // pp > 0
+  } // cmd length > 2
 
   // WifiReconnectIfNeeded();
 

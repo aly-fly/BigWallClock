@@ -1,12 +1,12 @@
 #ifndef TCPSOCKET_H_
 #define TCPSOCKET_H_
 
-extern String SocketTxData;
 extern bool SocketConnected;
 
 void startTcpSocket();
 void LoopSocketServer();
 void SendToSocket(String txt);
+void SendToSocket(char cc);
 String ReadFromSocket(void);
 bool DataAvailableInSocket(void);
 

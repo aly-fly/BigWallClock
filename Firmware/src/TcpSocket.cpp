@@ -23,7 +23,6 @@ WiFiServer SocketServer(DBG_SOCKET_PORT);
 WiFiClient SocketClient;
 #endif
 
-String SocketTxData;
 bool SocketConnected = false;
 
 void startTcpSocket()
@@ -38,9 +37,19 @@ void startTcpSocket()
 void SendToSocket(String txt)
 {
 #ifdef DBG_SOCKET_ENABLED
-  if (SocketConnected)
+  if (SocketClient.connected())
   {
-    SocketTxData.concat(txt);
+    SocketClient.write(txt.c_str(), txt.length());
+  }
+#endif
+}
+
+void SendToSocket(char cc)
+{
+#ifdef DBG_SOCKET_ENABLED
+  if (SocketClient.connected())
+  {
+    SocketClient.write(cc);
   }
 #endif
 }
@@ -48,7 +57,7 @@ void SendToSocket(String txt)
 bool DataAvailableInSocket(void)
 {
 #ifdef DBG_SOCKET_ENABLED
-  if (SocketConnected)
+  if (SocketClient.connected())
   {
     return SocketClient.available();
   }
@@ -59,7 +68,7 @@ bool DataAvailableInSocket(void)
 String ReadFromSocket(void)
 {
 #ifdef DBG_SOCKET_ENABLED
-  if (SocketConnected)
+  if (SocketClient.connected())
   {
     if (SocketClient.available())
     {
@@ -78,11 +87,6 @@ void LoopSocketServer()
   if (SocketClient.connected())
   {
     SocketConnected = true;
-    if (SocketTxData.length() > 0)
-    {
-      SocketClient.write(SocketTxData.c_str(), SocketTxData.length());
-      SocketTxData.clear();
-    }
   }
   else
   {
@@ -96,6 +100,8 @@ void LoopSocketServer()
     if (SocketClient)
     {                                      // if you get a SocketClient,
       Serial.println("New SocketClient."); // print a message out the serial port
+      // send welcome message
+      SendToSocket(SERIAL_COMMANDS_LIST);
     }
   }
 #endif

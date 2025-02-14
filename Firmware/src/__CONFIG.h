@@ -66,7 +66,7 @@
 #define VSPI_MOSI          GPIO_NUM_23
 
 #define HIGH_POWER      50
-#define LOW_POWER       37
+#define LOW_POWER       33
 #define OVERCURRENT_LVL  2
 #define STALL_LVL        5
 #define SPEED_LIMIT     50
@@ -85,8 +85,19 @@
 
 #define WS2812_LED_PIN   GPIO_NUM_32
 
-
-
 #define LOG_FILE_wPATH "/log.txt"
+
+#define SERIAL_COMMANDS_LIST  "Serial commands: \n" \
+                              "  00..12M -> Hour preset\n" \
+                              "  Z       -> Encoder zero\n" \
+                              "  1..0E   -> Enable clock\n" \
+                              "  1..0T   -> Test mode\n" \
+                              "  1..9C   -> Constant speed\n" \
+                              "  P       -> Encoder position?\n" \
+                              "  G       -> Encoder air gap? (loop)\n" \
+                              "  S       -> Motor status?\n" \
+                              " LL       -> Print log contents\n" \
+                              " DL       -> Delete log file\n"
+
 
 #endif /* __CONFIG_H_ */

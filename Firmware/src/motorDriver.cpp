@@ -185,7 +185,7 @@ bool MotorGetStatusOk(bool PrintAlways)
     iStatus = driver.getStatus();
   }  
 
-  ActiveErrors = "Status = 0x" + String(iStatus, HEX);  
+  ActiveErrors = "0x" + String(iStatus, HEX);  
   if (!(iStatus & STATUS_nSTALL_A))  ActiveErrors.concat("  STALL_A"); // STALL_A and STALL_B flags are forced low when a stall condition is detected on bridge A or bridge B 
   if (!(iStatus & STATUS_nSTALL_B))  ActiveErrors.concat("  STALL_B"); // respectively. The stall detection is operative only when the voltage mode control is selected. 
   if (!(iStatus & STATUS_nOCD))      ActiveErrors.concat("  OCD overcurrent");  
@@ -209,7 +209,7 @@ bool MotorGetStatusOk(bool PrintAlways)
   MotorOk = MotorOk & ((iStatus & 0b1110001000000000) == 0b1110001000000000); // stall, OCD, UVLO
   if ((!MotorOk) || (PrintAlways))
   {
-    Log("Motor Error(s): %s",  ActiveErrors.c_str());
+    Log("Motor status: %s",  ActiveErrors.c_str());
   }
   return MotorOk;
 }

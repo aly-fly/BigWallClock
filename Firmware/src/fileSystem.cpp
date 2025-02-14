@@ -33,7 +33,7 @@ bool saveToFile(String *TextToWrite)
   fileSize = getFileSize(LOG_FILE_wPATH);
   if (fileSize > 2500000)
   {
-    Serial.printf("File too big. (%u B)  Can't save data.\n", (uint32_t)(fileSize));
+    LogNS("File too big. (%u B)  Can't save data.\n", (uint32_t)(fileSize));
     return true; // clear buffer of collected data
   }
 
@@ -44,14 +44,14 @@ bool saveToFile(String *TextToWrite)
   // Insert the data in the photo file
   if (!file)
   {
-    Serial.println("Failed to open file in append mode!");
+    LogNS("Failed to open file in append mode!\n");
   }
   else
   {
-    Serial.println("File open.");
+    LogNS("File open.\n");
     yield();
     file.print(*TextToWrite);
-    Serial.print("Data has been saved.");
+    LogNS("Data has been saved.\n");
     result = true;
   }
   // Close the file (reading file size des not work before this!)
@@ -62,9 +62,9 @@ bool saveToFile(String *TextToWrite)
   fileSize = getFileSize(LOG_FILE_wPATH);
 
   bool ok = fileSize > 10;
-  Serial.printf("File save ok: %d\n", ok);
+  LogNS("File save ok: %d\n", ok);
 
-  Serial.printf("Save: %u B, %u ms\n", (uint32_t)(fileSize), (uint32_t)((Time2 - Time1) / 1000));
+  LogNS("Save: %u B, %u ms\n", (uint32_t)(fileSize), (uint32_t)((Time2 - Time1) / 1000));
   return result;
 }
 
@@ -74,24 +74,24 @@ void ReadAndPrintContentsOfTheLog(void)
   loggerPurgeToFile(true); // first save data from the RAM 
 
   size_t fileSize = getFileSize(LOG_FILE_wPATH);
-  Serial.printf("File size: %u B\n", (uint32_t)(fileSize));
+  LogNS("File size: %u B\n", (uint32_t)(fileSize));
 
   File file = LittleFS.open(LOG_FILE_wPATH, FILE_READ);
   if (!file)
   {
-    Serial.println("Failed to open file in read mode!");
+    LogNS("Failed to open file in read mode!\n");
   }
   else
   {
-    Serial.println("File open.");
+    LogNS("File open.\n");
 
     while (file.available()) 
     {
       char c = file.read();
-      Serial.print(c);
+      LogNSc(c);
     }
 
-    Serial.println("============================= EOF ================================== ");
+    LogNS("======================== EOF ============================= \n");
   }
   file.close();
 }
@@ -99,14 +99,14 @@ void ReadAndPrintContentsOfTheLog(void)
 
 void DeleteLogFile(void)
 {
-  Serial.print("Deleting log file...");
+  LogNS("Deleting log file...");
   if (LittleFS.remove(LOG_FILE_wPATH))
   {
-    Serial.println("ok.");
+    LogNS("ok.\n");
   }
   else
   {
-    Serial.println("FAIL!");
+    LogNS("FAIL!\n");
   }
 }
 

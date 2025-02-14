@@ -327,5 +327,6 @@ bool EncoderSetZeroHere(void)
     Serial.printf("  OK : %d\n", fncRes);
     result = result && fncRes;
 
+    LogNS("Result: %d\n", result);
     return result;
 }
