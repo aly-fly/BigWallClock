@@ -7,4 +7,5 @@
     https://www.google.com/search?q=esp_log_set_vprintf
 
 
-- scarse text debug log in a file
+- automatic timezone / DST adjust
+

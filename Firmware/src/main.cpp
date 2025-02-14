@@ -45,14 +45,20 @@ void setup()
   if (encoderInit())
     LED_color(1, LED_BLUbright, true);
   else
+  {
     LED_color(1, LED_REDbright, true);
+    Log("ENCODER INIT FAILED. HALTED.") while (1) yield(); // stop here
+  }
   delay(200);
 
   LED_color(2, LED_ORANGE, true);
   if (MotorInit() & TempSensorInit())
     LED_color(2, LED_BLUbright, true);
   else
+  {
     LED_color(2, LED_REDbright, true);
+    Log("MOTOR OR TEMP SENSOR INIT FAILED. HALTED.") while (1) yield(); // stop here
+  }
   delay(200);
 
   LED_color(3, LED_ORANGE, true);
@@ -93,6 +99,7 @@ void setup()
   Serial.println("  1..0T   -> Test mode");
   Serial.println("  1..9C   -> Constant speed");
   Serial.println("  P       -> Encoder position?");
+  Serial.println("  G       -> Encoder air gap? (loop)");
   Serial.println("  S       -> Motor status?");
   Serial.println(" LL       -> Print log contents");
   Serial.println(" DL       -> Delete log file");
@@ -142,7 +149,7 @@ void loop()
           CurrentHour12 = (CurrentHour % 12);
           TimeCurrent = (CurrentHour12 * CPR) + (CurrentMinute * CPR) / 60 + ((CurrentSecond * CPR) / 60 / 60);
           if (TestMode)
-            Serial.printf("MT12= %d; Hr = %d; Hr12 = %d;\n", EncoderPosMT12, CurrentHour, CurrentHour12);
+            Serial.printf("MT12 = %d; Hr = %d; Hr12 = %d;\n", EncoderPosMT12, CurrentHour, CurrentHour12);
 
           delta = TimeCurrent - TimeDisplayed;
           // handle overflow over 0:00 and 12:00
@@ -416,9 +423,25 @@ void loop()
         break;
 
       case 'P':
-        Serial.println("-> Encoder pos?");
+        Serial.println("-> Encoder position, status, air gap?");
         encoderRead(true);
+        encoderReadAirGap();
         break;
+
+      case 'G':
+      {
+        Serial.println("-> Encoder air gap?");
+        bool oldTM = TestMode;
+        TestMode = true; // do not save messages
+        for (int i = 0; i < 240; i++)
+        {
+          EnableMotor(false);
+          encoderReadAirGap();
+          delay(1000);
+        }
+        TestMode = oldTM;
+        break;
+      }
 
       case 'S':
         Serial.println("-> Motor status?");

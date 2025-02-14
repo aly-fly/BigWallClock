@@ -29,7 +29,7 @@ void int_log(void)
     SendToSocket(int_logbuffer);
     SendToSocket("\n");
 
-    if ((CollectForSaving.length() > 1000) && FSready)
+    if ((CollectForSaving.length() > 1500) && FSready)
     {
         if (saveToFile(&CollectForSaving))
         {
@@ -37,13 +37,13 @@ void int_log(void)
             LastTimeSaved = millis();
         }
     }
-    if (CollectForSaving.length() > 2000)
+    if (CollectForSaving.length() > 5000)
         CollectForSaving.clear(); // mem leak protection
 }
 
 void loggerPurgeToFile(bool immediatelly = false)
 {
-    if ((((millis() - LastTimeSaved) > 30000) && FSready && (CollectForSaving.length() > 150)) || immediatelly)
+    if ((((millis() - LastTimeSaved) > 90000) && FSready && (CollectForSaving.length() > 1500)) || immediatelly)
     {
         if (saveToFile(&CollectForSaving))
         {

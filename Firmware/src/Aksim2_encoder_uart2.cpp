@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "__CONFIG.h"
 #include "Logger.h"
+#include "Aksim2_encoder_uart2.h"
 
 uint8_t RxBuffer[1 + 58];
 String dbgStr;
@@ -9,8 +10,9 @@ String dbgStr;
 uint32_t EncoderPosST;
 int16_t EncoderPosMT;
 bool EncoderWarning, EncoderError;
-uint16_t EncoderSignalLevel;
 uint16_t EncoderDetailedStatus;
+uint16_t EncoderSignalLevel;
+float EncoderAirGap;
 
 bool queryEncoder(uint8_t command, uint8_t DataLength, bool printData)
 {
@@ -78,7 +80,10 @@ bool encoderInit(void)
         if (idx > 0)
         {
             Log("Encoder found and data is correct.");
-            result = true;
+            if (encoderRead(true))
+            {
+                result = !EncoderError;
+            }
         }
         else
         {
@@ -92,7 +97,7 @@ bool encoderInit(void)
     return result;
 }
 
-bool encoderRead(bool PrintData = false)
+bool encoderRead(bool PrintData)
 {
     bool result = false;
     if (queryEncoder('d', 7, false)) // detailed status
@@ -102,7 +107,7 @@ bool encoderRead(bool PrintData = false)
             // endiannness is incorrect, can't use memcpy...
             EncoderPosMT = (RxBuffer[1] << 8) | RxBuffer[2];
             EncoderPosST = (RxBuffer[3] << 24) | (RxBuffer[4] << 16) | RxBuffer[5];
-            EncoderDetailedStatus = (RxBuffer[6] << 16) | RxBuffer[7];
+            EncoderDetailedStatus = (RxBuffer[6] << 8) | RxBuffer[7];
 
             EncoderError = !(EncoderPosST & 0x0002);
             EncoderWarning = !(EncoderPosST & 0x0001);
@@ -157,6 +162,42 @@ bool encoderRead(bool PrintData = false)
     return result;
 
     //    queryEncoder('a', 7, true); // signal level
+}
+
+bool encoderReadAirGap(void)
+{
+    bool result = false;
+    if (queryEncoder('a', 7, false)) // signal level
+    {
+        if (RxBuffer[0] == 'a')
+        {
+            // endiannness is incorrect, can't use memcpy...
+            EncoderPosMT = (RxBuffer[1] << 8) | RxBuffer[2];
+            EncoderPosST = (RxBuffer[3] << 24) | (RxBuffer[4] << 16) | RxBuffer[5];
+            EncoderSignalLevel = (RxBuffer[6] << 8) | RxBuffer[7];
+
+            EncoderError = !(EncoderPosST & 0x0002);
+            EncoderWarning = !(EncoderPosST & 0x0001);
+            EncoderPosST = EncoderPosST >> (32 - 17); // align LSB of the position and cut signal level
+
+            if (EncoderSignalLevel > 0)
+                EncoderAirGap = -95.49 * log(EncoderSignalLevel) + 977.0; // K × Ln (SignalLevel) + N
+            else
+                EncoderAirGap = 0;
+
+            Log(" MT = %d; ST = %d; E = %d; W = %d;  SignalLevel = %u; Air gap = %.1f", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderSignalLevel, EncoderAirGap);
+            result = true;
+        }
+        else
+        {
+            Log("Incorrect header returned!");
+        }
+    }
+    else
+    {
+        Log("No useful data returned from encoder!");
+    }
+    return result;
 }
 
 extern "C" const byte UnlockSeq[] = {0xCD, 0xEF, 0x89, 0xAB};

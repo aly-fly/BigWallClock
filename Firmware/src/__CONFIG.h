@@ -66,7 +66,7 @@
 #define VSPI_MOSI          GPIO_NUM_23
 
 #define HIGH_POWER      50
-#define LOW_POWER       33
+#define LOW_POWER       37
 #define OVERCURRENT_LVL  2
 #define STALL_LVL        5
 #define SPEED_LIMIT     50
