@@ -9,3 +9,6 @@
 
 - automatic timezone / DST adjust
 
+- Web socket responding even when startup is blocked (callback functions?)
+
+

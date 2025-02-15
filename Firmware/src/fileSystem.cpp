@@ -6,21 +6,22 @@
 
 bool FSready = false;
 
-void fileSystem_init()
+bool fileSystem_init(void)
 {
+  bool result = false;
   // Initialize LittleFS
   Serial.println("Mounting LittleFS..");
-  if (!LittleFS.begin(true)) // format on fail
+  if (LittleFS.begin(true)) // format on fail
+  {
+    Serial.println("Filesystem ready.");
+    FSready = true;
+    result = true;
+  }
+  else
   {
     Serial.println("An Error has occurred while mounting LittleFS.");
-    while (1)
-    {
-      delay(10);
-      yield();
-    } // Stay here twiddling thumbs waiting
   }
-  Serial.println("Filesystem ready.");
-  FSready = true;
+  return result;
 }
 
 //==================================================================================================================

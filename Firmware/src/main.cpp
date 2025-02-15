@@ -37,35 +37,39 @@ void setup()
   Serial.println(BUILD_TIMESTAMP);
 
   LED_init();
-  LED_color(0, LED_BLUbright, true);
+  LED_color(0, LED_ORANGE, true);
+  if (fileSystem_init())
+    LED_color(0, LED_BLUbright, true);
+  else
+    LED_color(0, LED_REDbright, true);
   delay(200);
 
-  fileSystem_init();
   LED_color(1, LED_ORANGE, true);
-  if (encoderInit())
+  if (WifiInit())
     LED_color(1, LED_BLUbright, true);
   else
-  {
     LED_color(1, LED_REDbright, true);
-    Log("ENCODER INIT FAILED. HALTED.") while (1) yield(); // stop here
-  }
   delay(200);
+  startTcpSocket();
 
   LED_color(2, LED_ORANGE, true);
-  if (MotorInit() & TempSensorInit())
+  if (encoderInit())
     LED_color(2, LED_BLUbright, true);
   else
   {
     LED_color(2, LED_REDbright, true);
-    Log("MOTOR OR TEMP SENSOR INIT FAILED. HALTED.") while (1) yield(); // stop here
+    Log("ENCODER INIT FAILED. HALTED.") while (1) yield(); // stop here
   }
   delay(200);
 
   LED_color(3, LED_ORANGE, true);
-  if (WifiInit())
+  if (MotorInit() & TempSensorInit())
     LED_color(3, LED_BLUbright, true);
   else
+  {
     LED_color(3, LED_REDbright, true);
+    Log("MOTOR OR TEMP SENSOR INIT FAILED. HALTED.") while (1) yield(); // stop here
+  }
   delay(200);
 
   LED_color(4, LED_ORANGE, true);
@@ -73,7 +77,6 @@ void setup()
   LED_color(4, LED_BLUbright, true);
   delay(200);
 
-  startTcpSocket();
 
   /*
     String sPingIP;
