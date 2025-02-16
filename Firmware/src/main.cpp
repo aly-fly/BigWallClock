@@ -34,11 +34,9 @@ void setup()
     delay(100);
   }
   Serial.println();
-  Serial.println("Project: github.com/aly-fly/BigWallClock");
-  Serial.print("Version: ");
-  Serial.println(VERSION);
-  Serial.print("Build: ");
-  Serial.println(BUILD_TIMESTAMP);
+  Log("Project: github.com/aly-fly/BigWallClock");
+  Log("Version: %s", VERSION);
+  Log("Build: %s", BUILD_TIMESTAMP);
 
   LED_init();
   LED_color(0, LED_ORANGE, true);
@@ -98,10 +96,8 @@ void setup()
     }
   */
 
-  Serial.println("INIT FINISHED.");
-  Serial.println();
-  Serial.println(SERIAL_COMMANDS_LIST);
-  Serial.println();
+  LogNS("INIT FINISHED.\r\n\r\n");
+  Serial.println(SERIAL_COMMANDS_LIST);  // don't send to other channels
   Log("Clock running.");
 
   LEDbuiltin_OFF();
@@ -134,7 +130,6 @@ void loop()
 {
   if (GetCurrentTime())
   {
-
     if (ClockEnabled)
     {
       speedAdj = 0;
@@ -148,10 +143,10 @@ void loop()
           CurrentHour12 = (CurrentHour % 12);
           TimeCurrent = (CurrentHour12 * CPR) + (CurrentMinute * CPR) / 60 + ((CurrentSecond * CPR) / 60 / 60);
           if (TestMode)
-            LogNS("MT12 = %d; Hr = %d; Hr12 = %d;\n", EncoderPosMT12, CurrentHour, CurrentHour12);
+            LogNS("MT12 = %d; Hr = %d; Hr12 = %d;\r\n", EncoderPosMT12, CurrentHour, CurrentHour12);
 
           delta = TimeCurrent - TimeDisplayed;
-          // handle overflow over 0:00 and 12:00
+          // handle overflow at 0:00 and 12:00
           if (delta > CPR12half)
             delta -= CPR12;
           if (delta < -CPR12half)
@@ -173,7 +168,7 @@ void loop()
             speedAdjFiltered = (speedAdj * 0.05) + (speedAdjFiltered * 0.95);
           }
           if (TestMode)
-            LogNS("Encoder = %d; Time = %d; delta = %d; speedAdj = %f; Filtered = %f\n", TimeDisplayed, TimeCurrent, delta, speedAdj, speedAdjFiltered);
+            LogNS("Encoder = %d; Time = %d; delta = %d; speedAdj = %f; Filtered = %f\r\n", TimeDisplayed, TimeCurrent, delta, speedAdj, speedAdjFiltered);
 
         } // encoder no error
         else
@@ -349,13 +344,13 @@ void loop()
     if (pp > 0)
     {
       char Cmd = sSerialCmd.charAt(pp - 1);
-      LogNS("=====================================================\n");
-      LogNS("Command received: %c\n", Cmd);
+      LogNS("=====================================================\r\n");
+      LogNS("Command received: %c\r\n", Cmd);
 
       switch (Cmd)
       {
       case 'M':
-        LogNS("-> Multiturn preset\n");
+        LogNS("-> Multiturn preset\r\n");
         if (pp > 2)
         {
           char param1 = sSerialCmd.charAt(pp - 3);
@@ -365,7 +360,7 @@ void loop()
           uint16_t val = (param1 * 10) + param2;
           if ((val >= 0) && (val <= 11))
           {
-            LogNS("  New MT = %d\n", val);
+            LogNS("  New MT = %d\r\n", val);
             EncoderSetMT(val);
           }
         }
@@ -373,13 +368,13 @@ void loop()
         break;
 
       case 'Z':
-        LogNS("-> Encoder zero\n");
+        LogNS("-> Encoder zero\r\n");
         EncoderSetZeroHere();
         encoderRead(true); // print new pos value
         break;
 
       case 'E':
-        LogNS("-> Enable clock\n");
+        LogNS("-> Enable clock\r\n");
         if (pp > 1)
         {
           char param = sSerialCmd.charAt(pp - 2);
@@ -390,7 +385,7 @@ void loop()
         break;
 
       case 'T':
-        LogNS("-> Test mode\n");
+        LogNS("-> Test mode\r\n");
         if (pp > 1)
         {
           char param = sSerialCmd.charAt(pp - 2);
@@ -399,7 +394,7 @@ void loop()
         break;
 
       case 'C':
-        LogNS("-> Constant speed\n");
+        LogNS("-> Constant speed\r\n");
         if (pp > 1)
         {
           byte param = sSerialCmd.charAt(pp - 2);
@@ -409,7 +404,7 @@ void loop()
             ClockEnabled = false;
             TestMode = true;
             int speed = 1 << param;
-            LogNS("  Speed = %d\n", speed);
+            LogNS("  Speed = %d\r\n", speed);
             MoveConstSpeed((float)speed, TestMode);
           }
         }
@@ -417,7 +412,7 @@ void loop()
 
       case 'G':
       {
-        LogNS("-> Encoder air gap?\n");
+        LogNS("-> Encoder air gap?\r\n");
         bool oldTM = TestMode;
         TestMode = true; // do not save messages
         for (int i = 0; i < 240; i++)
@@ -431,7 +426,7 @@ void loop()
       }
 
       case 'S':
-        Log("-> System status?\n");
+        Log("-> System status?\r\n");
         MotorGetStatusOk(true);
         MotorTemperature = TempSensorRead();
         Log("Motor temperature = %.1f C", MotorTemperature);
@@ -449,7 +444,7 @@ void loop()
         break;
 
       case 'L':
-        LogNS("-> LOG\n");
+        LogNS("-> LOG\r\n");
         if (pp > 1)
         {
           byte param = sSerialCmd.charAt(pp - 2);
@@ -466,14 +461,12 @@ void loop()
         break;
 
       default:
-        LogNS("-> Unknown\n");
+        LogNS("-> Unknown\r\n");
         break;
       }
       sSerialCmd.clear(); // process only one command in one main loop
     } // pp > 0
   } // cmd length > 2
-
-  // WifiReconnectIfNeeded();
 
   loggerPurgeToFile();
 

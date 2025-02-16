@@ -31,7 +31,7 @@ void LED_init(void)
 
     if (MyRMT == NULL)
     {
-        Log("RMT init failed\n");
+        Log("RMT init failed");
     }
     float tickTime = rmtSetTick(MyRMT, 100); // 1 tick = 0.1 us (divisor = 8)
     Log("RMT Tick time = %.1f", tickTime);

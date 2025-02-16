@@ -34,12 +34,11 @@ bool queryEncoder(uint8_t command, uint8_t DataLength, bool printData)
     if (printData)
     {
         dbgStr.clear();
-        Serial.print("Data: ");
         for (int i = 0; i < bytesRead; i++)
         {
-            Serial.printf("%2X ", RxBuffer[i]);
+            dbgStr.concat("%2X ", RxBuffer[i]);
         }
-        Serial.println();
+        LogNS("Data: %s\r\n", dbgStr);
     }
 
     if (command == 'v')
@@ -53,10 +52,8 @@ bool queryEncoder(uint8_t command, uint8_t DataLength, bool printData)
                 dbgStr.concat(ch);
         }
         dbgStr.trim();
-        Serial.print("Data: ");
-        Serial.println(dbgStr);
+        LogNS("Data: %s \r\n", dbgStr);
     }
-
     return (bytesRead == (DataLength + 1));
 }
 
@@ -115,7 +112,7 @@ bool encoderRead(bool PrintData)
 
             if ((EncoderDetailedStatus != 0) || PrintData)
             {
-                Log(" MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
+                Log("Encoder: MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
                 String sDetStatus;
                 if ((EncoderDetailedStatus & 0x8000) > 0)
                     sDetStatus.concat("Multiturn error  ");
@@ -145,8 +142,8 @@ bool encoderRead(bool PrintData)
                     sDetStatus.concat("Magnetic error  ");
                 if ((EncoderDetailedStatus & 0x0001) > 0)
                     sDetStatus.concat("Acceleration error  ");
-                if (sDetStatus.length() > 0)
-                    Log("  %s", sDetStatus.c_str());
+                if (sDetStatus.length() > 2)
+                    Log("Encoder status:  %s", sDetStatus.c_str());
             }
             result = true;
         }
@@ -160,8 +157,6 @@ bool encoderRead(bool PrintData)
         Log("No useful data returned from encoder!");
     }
     return result;
-
-    //    queryEncoder('a', 7, true); // signal level
 }
 
 bool encoderReadAirGap(void)
@@ -185,7 +180,7 @@ bool encoderReadAirGap(void)
             else
                 EncoderAirGap = 0;
 
-            Log(" MT = %d; ST = %d; E = %d; W = %d;  SignalLevel = %u; Air gap = %.1f", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderSignalLevel, EncoderAirGap);
+            Log("Encoder: MT = %d; ST = %d; E = %d; W = %d;  SignalLevel = %u; Air gap = %.1f um", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderSignalLevel, EncoderAirGap);
             result = true;
         }
         else
@@ -205,7 +200,7 @@ uint8_t TxBuffer[10];
 
 bool EncoderTransferCommand(uint8_t DataLength)
 {
-    Serial.print("Sending command: ");
+    LogNS("Sending command: ");
     bool result = true;
     while (Serial2.available())
         Serial2.read(RxBuffer, 1); // clear rx buffer
@@ -223,9 +218,9 @@ bool EncoderTransferCommand(uint8_t DataLength)
         Serial2.read(RxBuffer, 1);
         if (TxBuffer[i] != RxBuffer[0])
             result = false;
-        Serial.printf("(%2X / %2X) ", TxBuffer[i], RxBuffer[0]);
+        LogNS("(%2X / %2X) ", TxBuffer[i], RxBuffer[0]);
     }
-    Serial.println(".");
+    LogNS(".\r\n");
     return result;
 }
 
@@ -248,43 +243,43 @@ bool EncoderSetZeroHere(void)
     bool fncRes;
 
     // Clear any existing zero offset
-    Serial.println("- Set offset to zero");
+    LogNS("- Set offset to zero\r\n");
     TxBuffer[4] = 'Z';
     TxBuffer[5] = 0;
     TxBuffer[6] = 0;
     TxBuffer[7] = 0;
     TxBuffer[8] = 0;
     fncRes = EncoderTransferCommand(9);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(10);
 
     // Save to Flash
-    Serial.println("- Save to flash");
+    LogNS("- Save to flash\r\n");
     TxBuffer[4] = 'c';
     fncRes = EncoderTransferCommand(5);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(500);
 
     // Clear any MT error
-    Serial.println("- Clear MT error");
+    LogNS("- Clear MT error\r\n");
     fncRes = EncoderSetMT(0);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(10);
 
     // Read position
-    Serial.println("- Read position");
+    LogNS("- Read position\r\n");
     fncRes = encoderRead(true);
     delay(10);
     fncRes = encoderRead(true);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(10);
 
     // Set new zero with a tiny offset to prevent MT jumping
-    Serial.println("- Set new offset");
+    LogNS("- Set new offset\r\n");
     uint32_t NewOffset = EncoderPosST - 5;
     TxBuffer[4] = 'Z';
     TxBuffer[5] = (NewOffset >> 24) & 0xFF;
@@ -292,41 +287,41 @@ bool EncoderSetZeroHere(void)
     TxBuffer[7] = (NewOffset >> 8) & 0xFF;
     TxBuffer[8] = NewOffset & 0xFF;
     fncRes = EncoderTransferCommand(9);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(10);
 
     // Read position
-    Serial.println("- Read position");
+    LogNS("- Read position\r\n");
     fncRes = encoderRead(true);
     delay(10);
     fncRes = encoderRead(true);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(10);
 
     // Save to Flash
-    Serial.println("- Save to flash");
+    LogNS("- Save to flash\r\n");
     TxBuffer[4] = 'c';
     fncRes = EncoderTransferCommand(5);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(500);
 
     // Clear any MT error
-    Serial.println("- Clear MT error");
+    LogNS("- Clear MT error\r\n");
     fncRes = EncoderSetMT(0);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
     delay(10);
 
     // Read position
-    Serial.println("- Read position");
+    LogNS("- Read position\r\n");
     fncRes = encoderRead(true);
     fncRes = encoderRead(true);
-    Serial.printf("  OK : %d\n", fncRes);
+    LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;
 
-    LogNS("Result: %d\n", result);
+    LogNS("Result: %d\r\n", result);
     return result;
 }

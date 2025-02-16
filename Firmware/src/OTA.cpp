@@ -27,7 +27,7 @@ void OTA_init(void)
   });
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    LogNS("Progress: %u%%\n", (progress / (total / 100))); // Show event for debug
+    LogNS("Progress: %u%%\r\n", (progress / (total / 100))); // Show event for debug
     LEDbuiltin_Toggle();
   });
 

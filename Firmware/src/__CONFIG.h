@@ -88,16 +88,16 @@
 
 #define LOG_FILE_wPATH "/log.txt"
 
-#define SERIAL_COMMANDS_LIST  "Serial commands: \n" \
-                              "  00..12M -> Hour preset\n" \
-                              "  Z       -> Encoder zero\n" \
-                              "  1..0E   -> Enable clock\n" \
-                              "  1..0T   -> Test mode\n" \
-                              "  1..9C   -> Constant speed\n" \
-                              "  G       -> Encoder air gap? (loop)\n" \
-                              "  S       -> System status?\n" \
-                              " LL       -> Print log contents\n" \
-                              " DL       -> Delete log file\n"
+#define SERIAL_COMMANDS_LIST  "Serial commands: \r\n" \
+                              "  00..12M -> Hour preset\r\n" \
+                              "  Z       -> Encoder zero\r\n" \
+                              "  1..0E   -> Enable clock\r\n" \
+                              "  1..0T   -> Test mode\r\n" \
+                              "  1..9C   -> Constant speed\r\n" \
+                              "  G       -> Encoder air gap? (loop)\r\n" \
+                              "  S       -> System status?\r\n" \
+                              " LL       -> Print log contents\r\n" \
+                              " DL       -> Delete log file\r\n"
 
 
 #endif /* __CONFIG_H_ */

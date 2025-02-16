@@ -40,7 +40,7 @@ void setClock(void) {
         } else {
           Serial.printf("%s ", sntpIP.toString().c_str());
         }
-        Serial.printf("- Reachability: %o\n", sntp_getreachability(i));
+        Serial.printf("- Reachability: %o\r\n", sntp_getreachability(i));
       }
     }
 
@@ -59,12 +59,12 @@ void setClock(void) {
   time_t nowSecs = time(nullptr);
   while (nowSecs < 8 * 3600 * 2) {
     delay(500);
-    Serial.print(".");
+    LogNS(".");
     yield();
     nowSecs = time(nullptr);
   }
 
-  Serial.println();
+  LogNS("\r\n");
   struct tm timeinfo;
   //gmtime_r(&nowSecs, &timeinfo);
   getLocalTime(&timeinfo);

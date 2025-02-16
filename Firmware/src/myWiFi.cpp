@@ -86,28 +86,20 @@ bool WifiInit(void)  {
   unsigned long StartTime = millis();
   while ((WiFi.status() != WL_CONNECTED)) {
     delay(500);
-    //Serial.print(".");
+    Serial.print(".");
     if ((millis() - StartTime) > (WIFI_CONNECT_TIMEOUT_SEC * 1000)) {
-      //Serial.println();
+      Serial.println();
       Log("WiFi connection timeout!");
-      //delay(2000);
-      //WifiState = disconnected;
       return false; // exit loop, exit procedure, continue startup
     }
   }
 #endif
   
-  //Serial.println();
+  Serial.println();
   Log("WiFi connected. SSID: %s, IP: %s", WiFi.SSID(), WiFi.localIP().toString());
   delay(200);
   return true;
 }
 
-void WifiReconnectIfNeeded(void) {
-  if (!WiFi.isConnected()) {
-    Log("Attempting WiFi reconnection...");
-    WiFi.reconnect();
-  }    
-}
 
 

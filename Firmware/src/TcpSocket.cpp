@@ -15,7 +15,7 @@
 #include "Arduino.h"
 #include "WiFi.h"
 #include <WiFiClient.h>
-
+#include "Logger.h"
 #include "TcpSocket.h"
 
 #ifdef DBG_SOCKET_ENABLED
@@ -29,8 +29,7 @@ void startTcpSocket()
 {
 #ifdef DBG_SOCKET_ENABLED
   SocketServer.begin();
-  Serial.println("Debug Socket Server running on port: " + String(DBG_SOCKET_PORT));
-  Serial.println("");
+  LogNS("Debug Socket Server running on port: %d\r\n", DBG_SOCKET_PORT);
 #endif
 }
 
@@ -102,6 +101,8 @@ void LoopSocketServer()
       Serial.println("New SocketClient."); // print a message out the serial port
       // send welcome message
       SendToSocket(SERIAL_COMMANDS_LIST);
+      SendToSocket("\r\n");
+      SendToSocket(CollectForSaving); // send any data from the recent history
     }
   }
 #endif

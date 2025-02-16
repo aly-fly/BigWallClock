@@ -10,19 +10,19 @@ bool fileSystem_init(void)
 {
   bool result = false;
   // Initialize LittleFS
-  Serial.println("Mounting LittleFS..");
+  Log("Mounting LittleFS..");
   if (LittleFS.begin(true)) // format on fail
   {
-    Serial.println("Filesystem ready.");
-    Serial.printf("FS size: %d Bytes\n", LittleFS.totalBytes());
-    Serial.printf("FS used: %d Bytes\n", LittleFS.usedBytes());
-    Serial.printf("FS available: %d Bytes\n", LittleFS.totalBytes() - LittleFS.usedBytes());
+    Log("Filesystem ready.");
+    Log("FS size: %d Bytes", LittleFS.totalBytes());
+    Log("FS used: %d Bytes", LittleFS.usedBytes());
+    Log("FS available: %d Bytes", LittleFS.totalBytes() - LittleFS.usedBytes());
     FSready = true;
     result = true;
   }
   else
   {
-    Serial.println("An Error has occurred while mounting LittleFS.");
+    Log("An Error has occurred while mounting LittleFS.");
   }
   return result;
 }
@@ -47,25 +47,25 @@ bool saveToFile(String *TextToWrite)
   fileSize = getFileSize(LOG_FILE_wPATH);
   if ((fileSize + TextToWrite->length()) > (AvailableSpace - 500))
   {
-    LogNS("File too big. (%u B)  Can't save data.\n", (uint32_t)(fileSize));
+    LogNS("File too big. (%u B)  Can't save data.\r\n", (uint32_t)(fileSize));
     return true; // clear buffer of collected data
   }
 
-  //Serial.printf("File name: %s\n", LOG_FILE_wPATH);
+  //LogNS("File name: %s\r\n", LOG_FILE_wPATH);
   int64_t Time1 = esp_timer_get_time();
   File file = LittleFS.open(LOG_FILE_wPATH, FILE_APPEND);
 
   // Insert the data in the photo file
   if (!file)
   {
-    LogNS("Failed to open file in append mode!\n");
+    LogNS("Failed to open file in append mode!\r\n");
   }
   else
   {
-    LogNS("File open.\n");
+    LogNS("File open.\r\n");
     yield();
     file.print(*TextToWrite);
-    LogNS("Data has been saved.\n");
+    LogNS("Data has been saved.\r\n");
     result = true;
   }
   // Close the file (reading file size des not work before this!)
@@ -76,9 +76,9 @@ bool saveToFile(String *TextToWrite)
   fileSize = getFileSize(LOG_FILE_wPATH);
 
   bool ok = fileSize > 10;
-  LogNS("File save ok: %d\n", ok);
+  LogNS("File save ok: %d\r\n", ok);
 
-  LogNS("Save: %u B, %u ms\n", (uint32_t)(fileSize), (uint32_t)((Time2 - Time1) / 1000));
+  LogNS("Save: %u B, %u ms\r\n", (uint32_t)(fileSize), (uint32_t)((Time2 - Time1) / 1000));
   return result;
 }
 
@@ -88,16 +88,16 @@ void ReadAndPrintContentsOfTheLog(void)
   loggerPurgeToFile(true); // first save data from the RAM 
 
   size_t fileSize = getFileSize(LOG_FILE_wPATH);
-  LogNS("File size: %u B\n", (uint32_t)(fileSize));
+  LogNS("File size: %u B\r\n", (uint32_t)(fileSize));
 
   File file = LittleFS.open(LOG_FILE_wPATH, FILE_READ);
   if (!file)
   {
-    LogNS("Failed to open file in read mode!\n");
+    LogNS("Failed to open file in read mode!\r\n");
   }
   else
   {
-    LogNS("File open.\n");
+    LogNS("File open.\r\n");
 
     while (file.available()) 
     {
@@ -105,7 +105,7 @@ void ReadAndPrintContentsOfTheLog(void)
       LogNSc(c);
     }
 
-    LogNS("======================== EOF ============================= \n");
+    LogNS("======================== EOF ============================= \r\n");
   }
   file.close();
 }
@@ -116,11 +116,11 @@ void DeleteLogFile(void)
   LogNS("Deleting log file...");
   if (LittleFS.remove(LOG_FILE_wPATH))
   {
-    LogNS("ok.\n");
+    LogNS("ok.\r\n");
   }
   else
   {
-    LogNS("FAIL!\n");
+    LogNS("FAIL!\r\n");
   }
 }
 

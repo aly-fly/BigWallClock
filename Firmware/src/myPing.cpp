@@ -21,10 +21,10 @@ static void on_ping_success(esp_ping_handle_t hdl, void *args)
     //esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &addr, sizeof(addr));
     esp_ping_get_profile(hdl, ESP_PING_PROF_SIZE, &recv_len, sizeof(recv_len));
     esp_ping_get_profile(hdl, ESP_PING_PROF_TIMEGAP, &elapsed_time, sizeof(elapsed_time));
-//    printf("%d bytes from %s icmp_seq=%d ttl=%d time=%d ms\n",
+//    printf("%d bytes from %s icmp_seq=%d ttl=%d time=%d ms\r\n",
 //           recv_len, inet_ntoa(addr.u_addr.ip4), seqno, ttl, elapsed_time);
     char txt[60];
-    sprintf(txt, "Received %d bytes icmp_seq=%d ttl=%d time=%d ms\n", recv_len, seqno, ttl, elapsed_time);
+    sprintf(txt, "Received %d bytes icmp_seq=%d ttl=%d time=%d ms\r\n", recv_len, seqno, ttl, elapsed_time);
     Serial.print(txt);
 }
 
@@ -34,9 +34,9 @@ static void on_ping_timeout(esp_ping_handle_t hdl, void *args)
     //ip_addr_t addr;
     esp_ping_get_profile(hdl, ESP_PING_PROF_SEQNO, &seqno, sizeof(seqno));
     //esp_ping_get_profile(hdl, ESP_PING_PROF_IPADDR, &addr, sizeof(addr));
-//    printf("From %s icmp_seq=%d timeout\n", inet_ntoa(addr.u_addr.ip4), seqno);
+//    printf("From %s icmp_seq=%d timeout\r\n", inet_ntoa(addr.u_addr.ip4), seqno);
     char txt[60];
-    sprintf(txt, "Timeout icmp_seq=%d\n", seqno);
+    sprintf(txt, "Timeout icmp_seq=%d\r\n", seqno);
     Serial.print(txt);
 }
 
@@ -49,7 +49,7 @@ static void on_ping_end(esp_ping_handle_t hdl, void *args)
     esp_ping_get_profile(hdl, ESP_PING_PROF_REPLY, &packets_received, sizeof(packets_received));
     esp_ping_get_profile(hdl, ESP_PING_PROF_DURATION, &total_time_ms, sizeof(total_time_ms));
     char txt[60];
-    sprintf(txt, "%d packets transmitted, %d received, time %dms\n", transmitted, packets_received, total_time_ms);
+    sprintf(txt, "%d packets transmitted, %d received, time %dms\r\n", transmitted, packets_received, total_time_ms);
     Serial.print(txt);
     ping_running = false;
 }
@@ -79,7 +79,7 @@ void destroy_ping(){
 
 
 uint32_t ppiinngg (uint32_t IP_to_ping) {
-    printf("Ping...\n");
+    printf("Ping...\r\n");
 
     ip_addr_t addr1;
     addr1.type = IPADDR_TYPE_V4;
@@ -98,7 +98,7 @@ uint32_t ppiinngg (uint32_t IP_to_ping) {
     }    
 
     destroy_ping();
-    printf("Ping finished\n");
+    printf("Ping finished\r\n");
     return (packets_received > 0);
 }
 

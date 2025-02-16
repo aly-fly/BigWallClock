@@ -25,10 +25,10 @@ void int_log(void)
     if (!TestMode)
     {
         CollectForSaving.concat(int_logbuffer);
-        CollectForSaving.concat('\n');
+        CollectForSaving.concat('\r\n');
     }
     SendToSocket(int_logbuffer);
-    SendToSocket("\n");
+    SendToSocket("\r\n");
     int_logbuffer[0] = '\0';
 
     if ((CollectForSaving.length() > 1500) && FSready)

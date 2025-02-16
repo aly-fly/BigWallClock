@@ -11,4 +11,5 @@
 
 - Web socket responding even when startup is blocked (callback functions?)
 
+- prevent fast repetitive logs to be saved into the file
 
