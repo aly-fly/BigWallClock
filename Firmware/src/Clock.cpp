@@ -13,7 +13,7 @@ unsigned long LastTimeClockSynced = 0; // data is not valid
 
 // Required for WiFiClientSecure and for checks the validity date of the certificate. 
 void setClock(void) {
-  Log("setClock()");
+  //Log("setClock()");
 
   /*
   if (!inHomeLAN) {

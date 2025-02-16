@@ -39,6 +39,14 @@ void setup()
   Log("Build: %s", BUILD_TIMESTAMP);
 
   LED_init();
+
+  if (!digitalRead(GPIO_NUM_0))
+  {
+    LED_test();
+    while (1)
+      yield();
+  }
+
   LED_color(0, LED_ORANGE, true);
   if (fileSystem_init())
     LED_color(0, LED_BLUbright, true);
@@ -66,20 +74,33 @@ void setup()
   delay(200);
 
   LED_color(3, LED_ORANGE, true);
-  if (MotorInit() & TempSensorInit())
+  if (MotorInit())
     LED_color(3, LED_BLUbright, true);
   else
   {
     LED_color(3, LED_REDbright, true);
-    Log("MOTOR OR TEMP SENSOR INIT FAILED. HALTED.") while (1) yield(); // stop here
+    Log("MOTOR INIT FAILED. HALTED.") while (1) yield(); // stop here
   }
   delay(200);
 
   LED_color(4, LED_ORANGE, true);
-  setClock();
-  LED_color(4, LED_BLUbright, true);
+  if (MotorInit() & TempSensorInit())
+    LED_color(4, LED_BLUbright, true);
+  else
+  {
+    LED_color(4, LED_REDbright, true);
+    Log("TEMP SENSOR INIT FAILED. HALTED.") while (1) yield(); // stop here
+  }
   delay(200);
 
+  LED_color(5, LED_ORANGE, true);
+  setClock();
+  LED_color(5, LED_BLUbright, true);
+  delay(200);
+
+  EnableMotor(true);
+  LED_color(6, LED_BLUbright, true);
+  delay(200);
 
   /*
     String sPingIP;
@@ -97,11 +118,11 @@ void setup()
   */
 
   LogNS("INIT FINISHED.\r\n\r\n");
-  Serial.println(SERIAL_COMMANDS_LIST);  // don't send to other channels
+  Serial.println(SERIAL_COMMANDS_LIST); // don't send to other channels
   Log("Clock running.");
 
   LEDbuiltin_OFF();
-  LED_off();
+  LED_clear(false);
   LED_color(0, LED_GRNdim, true);
 }
 
@@ -121,8 +142,7 @@ bool ErrorCounterLogged = false;
 
 String sSerialCmd;
 int LEDlastUpdate = 0; // limit refresh rate
-int LEDsequence = 0;
-int LastHour = 0;
+int LastHour = -1;
 float MotorTemperature = 0;
 float MotorTempLastLogged = -100;
 
@@ -282,48 +302,41 @@ void loop()
 
   if (CurrentHour != LastHour)
   {
-    NightMode = ((CurrentHour >= NIGHT_TIME) || (CurrentHour < DAY_TIME));
-    if (NightMode)
+    if ((CurrentHour >= NIGHT_TIME) || (CurrentHour < DAY_TIME))
     {
-      LED_Dimming(NIGHT_TIME_DIMMING);
+      LED_clear(true);
+      LED_Dimming(0);
     }
     else
     {
-      LED_Dimming(DAY_TIME_BRIGHTNESS);
+      if (CurrentHour >= EVENING_TIME)
+      {
+        LED_Dimming(EVENING_TIME_DIMMING);
+      }
+      else
+      {
+        LED_Dimming(DAY_TIME_BRIGHTNESS);
+      }
     }
     LastHour = CurrentHour;
   }
 
   if (LEDlastUpdate != CurrentSecond) // limit to 1x per second
   {
-    byte LedNum, LedColorIdx;
-    // clear pixels
-    for (LedNum = 1; LedNum < 5; LedNum++)
-    {
-      LED_color(LedNum, 0, false);
-    }
-    LedNum = (LEDsequence % 4) + 1;
-    LedColorIdx = (LEDsequence / 4);
-    uint32_t LedColor;
-    switch (LedColorIdx)
-    {
-    case 0:
-      LedColor = LED_REDdim;
-      break;
-    case 1:
-      LedColor = LED_GRNdim;
-      break;
+    byte LedNum;
+    uint32_t LedColor = LED_WHTdim;
 
-    default:
-      LedColor = LED_BLUdim;
-      break;
+    if (CurrentSecond == 0)
+    {
+      LED_clear(false);
+    }
+    LedNum = CurrentSecond * 2;
+    if (LedNum >= 2)
+    {
+      LED_color(LedNum - 2, 0, false); // clear previous one
     }
     LED_color(LedNum, LedColor, true);
-    LEDsequence++;
-    if (LEDsequence >= 12)
-      LEDsequence = 0;
 
-    // LED_color(2, ((59 * 2) - (CurrentSecond * 2) << 16) | (CurrentSecond * 2), true);
     LEDlastUpdate = CurrentSecond;
   }
 
@@ -426,7 +439,7 @@ void loop()
       }
 
       case 'S':
-        Log("-> System status?\r\n");
+        Log("-> System status?");
         MotorGetStatusOk(true);
         MotorTemperature = TempSensorRead();
         Log("Motor temperature = %.1f C", MotorTemperature);

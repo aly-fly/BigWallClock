@@ -2,18 +2,24 @@
 #include <ArduinoOTA.h>
 #include "Logger.h"
 #include "LED_builtin.h"
+#include "LEDs.h"
+
+// hint: for web server version of OTA use: https://github.com/ayushsharma82/ElegantOTA
+
+int divisor = 0;
 
 //**************************************************************************************************
 //                                         O T A S E T U P                                         *
 //**************************************************************************************************
 // Update via WiFi/Ethernet has been started by Arduino IDE or PlatformIO.                         *
 //**************************************************************************************************
+
 void OTA_init(void)
 {
   ArduinoOTA.setRebootOnSuccess(true);
 
   ArduinoOTA.onStart([]() {
-    const char* msga = "OTA Update Started" ;
+    const char* msga = "OTA Update Started";
     const char* msgb = "" ;
     if ( ArduinoOTA.getCommand() == U_FLASH ) {
       msgb = "Type: sketch";
@@ -27,8 +33,15 @@ void OTA_init(void)
   });
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    LogNS("Progress: %u%%\r\n", (progress / (total / 100))); // Show event for debug
-    LEDbuiltin_Toggle();
+    int percent = (progress * 100) / total;
+    LogNS("Progress: %u%%\r\n", percent);
+    LED_showProgress(percent);
+    divisor++;
+    if (divisor > 5)
+    {
+      LEDbuiltin_Toggle();
+      divisor = 0;
+    }
   });
 
   ArduinoOTA.onEnd([]() {

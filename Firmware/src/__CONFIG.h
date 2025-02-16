@@ -23,11 +23,12 @@
 #define GMT_OFFSET  1
 #define DST_OFFSET  1
 
-#define DAY_TIME     7
-#define NIGHT_TIME  21
+#define DAY_TIME       7
+#define EVENING_TIME  21
+#define NIGHT_TIME    23
 
-#define NIGHT_TIME_DIMMING    14
-#define DAY_TIME_BRIGHTNESS  123  // max 255
+#define EVENING_TIME_DIMMING    14
+#define DAY_TIME_BRIGHTNESS  200  // max 255
 
 // ************ WiFi config *********************
 //#define WIFI_SSID  "..." -> enter into the file __CONFIG_SECRETS.h

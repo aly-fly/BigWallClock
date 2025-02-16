@@ -161,7 +161,7 @@ end;
   driver.setHoldKVAL(LOW_POWER);
   HiPowerMode = false;
   
-  EnableMotor(true);
+  //EnableMotor(true); -- after all system is initialized!
 
   Log("Motor driver initialisation complete.");
   return result;

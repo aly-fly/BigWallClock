@@ -5,10 +5,11 @@
 #include "__CONFIG.h"
 #include "esp32-hal-rmt.h"
 #include "Logger.h"
+#include "LEDs.h"
 
 //======================================================================================================================
 
-#define NR_OF_LEDS 5
+#define NR_OF_LEDS 128
 #define NR_OF_ALL_BITS 24 * NR_OF_LEDS
 
 struct LEDdata_t
@@ -94,19 +95,19 @@ void LEDtransmitData(void)
 
             for (bit = 0; bit < 8; bit++)
             {
-                if (data & (1 << (7 - bit)))  // bit 1 = 0.8 us HI + 0.4 us LO
+                if (data & (1 << (7 - bit))) // bit 1 = 0.8 us HI + 0.4 us LO
                 {
                     LEDtxBuffer[streamBitIdx].level0 = 1;
-                    LEDtxBuffer[streamBitIdx].duration0 = 8;
+                    LEDtxBuffer[streamBitIdx].duration0 = 12;
                     LEDtxBuffer[streamBitIdx].level1 = 0;
                     LEDtxBuffer[streamBitIdx].duration1 = 4;
                 }
-                else                          // bit 0 = 0.4 us HI + 0.8 us LO
+                else // bit 0 = 0.4 us HI + 0.8 us LO
                 {
                     LEDtxBuffer[streamBitIdx].level0 = 1;
                     LEDtxBuffer[streamBitIdx].duration0 = 4;
                     LEDtxBuffer[streamBitIdx].level1 = 0;
-                    LEDtxBuffer[streamBitIdx].duration1 = 8;
+                    LEDtxBuffer[streamBitIdx].duration1 = 12;
                 }
                 streamBitIdx++;
             }
@@ -117,14 +118,14 @@ void LEDtransmitData(void)
     rmtWrite(MyRMT, LEDtxBuffer, NR_OF_ALL_BITS);
 }
 
-void LED_color(int LedNum, uint32_t RGB, bool UpdateNow = false)
+void LED_color(int LedNum, uint32_t RGB, bool UpdateNow)
 {
-    if (LedNum >= NR_OF_LEDS)
+    if ((LedNum < 0) || (LedNum >= NR_OF_LEDS) || (Dimming == 0))
         return;
 
-    LEDdata[LedNum].Red   = (((RGB >> 16) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNum].Green = (((RGB >>  8) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNum].Blue  = (((RGB      ) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNum].Red = (((RGB >> 16) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNum].Green = (((RGB >> 8) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNum].Blue = (((RGB) & 0xFF) * Dimming) >> 8;
 
     if (UpdateNow)
     {
@@ -132,15 +133,125 @@ void LED_color(int LedNum, uint32_t RGB, bool UpdateNow = false)
     }
 }
 
-void LED_off(void)
-{
-    // Send the data
-    rmtWrite(MyRMT, LEDtxReset, 1);
-    memset(LEDdata, 0, sizeof(LEDdata));
-}
-
-void LED_Dimming (byte dim)
+void LED_Dimming(byte dim)
 {
     Dimming = dim;
 }
 
+void LED_clear(bool UpdateNow)
+{
+    /*
+    for (int LedNum = 0; LedNum < NR_OF_LEDS; i++)
+    {
+        //LED_color(LedNum, 0, false);
+        LEDdata[LedNum].Red = 0;
+        LEDdata[LedNum].Green = 0;
+        LEDdata[LedNum].Blue = 0;
+    }
+    */
+    memset(LEDdata, 0, sizeof(LEDdata));
+    if (UpdateNow)
+    {
+        rmtWrite(MyRMT, LEDtxReset, 1);
+        LEDtransmitData();
+    }
+}
+
+void LED_showProgress(int percent)
+{
+    int idx;
+    uint32_t color;
+    for (int i = 0; i < NR_OF_LEDS; i++)
+    {
+        // idx = (int)round(((float)percent * NR_OF_LEDS) / 100);
+        idx = ((percent * ((NR_OF_LEDS * 2) + 1)) / 200); // + 0.5 to show both 0% and 100%
+        if (idx == i)
+            color = LED_GRNbright;
+        else
+            color = 0x030303; // dim grey
+        LED_color(i, color, false);
+    }
+    LEDtransmitData();
+}
+
+void LED_test(void)
+{
+    Serial.println("LED test");
+    uint32_t color;
+    for (int i = 0; i < NR_OF_LEDS; i++)
+    {
+        Serial.println(i);
+        switch (i % 3)
+        {
+        case 0:
+            color = LED_REDbright;
+            break;
+
+        case 1:
+            color = LED_GRNbright;
+            break;
+
+        default:
+            color = LED_BLUbright;
+            break;
+        }
+        LED_color(i, color, true);
+        delay(500);
+    }
+
+    delay (2000);
+    LED_clear(true);
+    Serial.println("LED test random");
+    useRealRandomGenerator(true);
+    byte r, g, b;
+
+    for (int i = 0; i < NR_OF_LEDS; i++)
+    {
+        Serial.println(i);
+
+        r = random(0, 123);
+        g = random(0, 123);
+        b = random(0, 123);
+        color = (r << 16) | (g << 8) | b;
+        LED_color(i, color, true);
+        delay(500);
+    }
+}
+
+
+/*
+RGB sequencer
+
+  if (LEDlastUpdate != CurrentSecond) // limit to 1x per second
+  {
+    byte LedNum, LedColorIdx;
+    // clear pixels
+    for (LedNum = 1; LedNum < 5; LedNum++)
+    {
+      LED_color(LedNum, 0, false);
+    }
+    LedNum = (LEDsequence % 4) + 1;
+    LedColorIdx = (LEDsequence / 4);
+    uint32_t LedColor;
+    switch (LedColorIdx)
+    {
+    case 0:
+      LedColor = LED_REDdim;
+      break;
+    case 1:
+      LedColor = LED_GRNdim;
+      break;
+
+    default:
+      LedColor = LED_BLUdim;
+      break;
+    }
+    LED_color(LedNum, LedColor, true);
+    LEDsequence++;
+    if (LEDsequence >= 12)
+      LEDsequence = 0;
+
+    // LED_color(2, ((59 * 2) - (CurrentSecond * 2) << 16) | (CurrentSecond * 2), true);
+    LEDlastUpdate = CurrentSecond;
+  }
+*/

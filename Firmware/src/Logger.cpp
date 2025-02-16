@@ -25,7 +25,7 @@ void int_log(void)
     if (!TestMode)
     {
         CollectForSaving.concat(int_logbuffer);
-        CollectForSaving.concat('\r\n');
+        CollectForSaving.concat("\r\n");
     }
     SendToSocket(int_logbuffer);
     SendToSocket("\r\n");
@@ -58,7 +58,7 @@ void LogNSc(char cc)
 
 void loggerPurgeToFile(bool immediatelly = false)
 {
-    if ((((millis() - LastTimeSaved) > 90000) && FSready && (CollectForSaving.length() > 1500)) || immediatelly)
+    if ((((millis() - LastTimeSaved) > 90000) && FSready && (CollectForSaving.length() > 200)) || immediatelly)
     {
         if (saveToFile(&CollectForSaving))
         {
