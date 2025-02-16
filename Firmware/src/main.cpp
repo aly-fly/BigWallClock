@@ -6,6 +6,7 @@
 #include "Version.h"
 #include "__CONFIG.h"
 #include "GlobalVariables.h"
+#include "LED_builtin.h"
 #include "myWiFi.h"
 #include "Clock.h"
 #include "myPing.h"
@@ -16,11 +17,14 @@
 #include "Logger.h"
 #include "fileSystem.h"
 #include "TcpSocket.h"
+#include "OTA.h"
 
 void setup()
 {
   Serial.begin(115200);
   pinMode(GPIO_NUM_0, INPUT_PULLUP);
+  LEDbuiltin_init();
+  LEDbuiltin_ON();
 
   // delay 2 sec on the start to connect from programmer to serial terminal
   int i;
@@ -51,6 +55,7 @@ void setup()
     LED_color(1, LED_REDbright, true);
   delay(200);
   startTcpSocket();
+  OTA_init();
 
   LED_color(2, LED_ORANGE, true);
   if (encoderInit())
@@ -99,6 +104,7 @@ void setup()
   Serial.println();
   Log("Clock running.");
 
+  LEDbuiltin_OFF();
   LED_off();
   LED_color(0, LED_GRNdim, true);
 }
@@ -390,12 +396,6 @@ void loop()
           char param = sSerialCmd.charAt(pp - 2);
           TestMode = (param == '1');
         }
-        // debug
-        LogNS("[IDLE] Free memory: %u bytes", esp_get_free_heap_size());
-        multi_heap_info_t info;
-        heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); // internal RAM, memory capable to store data or to create new task
-        LogNS("[IDLE] Largest available block: %u bytes", info.largest_free_block);
-        LogNS("[IDLE] Minimum free ever: %u bytes", info.minimum_free_bytes);
         break;
 
       case 'C':
@@ -415,12 +415,6 @@ void loop()
         }
         break;
 
-      case 'P':
-        LogNS("-> Encoder position, status, air gap?\n");
-        encoderRead(true);
-        encoderReadAirGap();
-        break;
-
       case 'G':
       {
         LogNS("-> Encoder air gap?\n");
@@ -437,10 +431,21 @@ void loop()
       }
 
       case 'S':
-        LogNS("-> Motor status?\n");
+        Log("-> System status?\n");
         MotorGetStatusOk(true);
         MotorTemperature = TempSensorRead();
         Log("Motor temperature = %.1f C", MotorTemperature);
+
+        encoderRead(true);
+        encoderReadAirGap();
+
+        fileSystemPrintInfo();
+
+        Log("Free memory: %u bytes", esp_get_free_heap_size());
+        multi_heap_info_t info;
+        heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); // internal RAM, memory capable to store data or to create new task
+        Log("Largest available block: %u bytes", info.largest_free_block);
+        Log("Minimum free ever: %u bytes", info.minimum_free_bytes);
         break;
 
       case 'L':
@@ -473,6 +478,10 @@ void loop()
   loggerPurgeToFile();
 
   LoopSocketServer();
+
+  LEDbuiltin_Toggle(); // toggle onboard LED
+
+  OTA_loop();
 
   delay(100);
 

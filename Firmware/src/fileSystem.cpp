@@ -14,6 +14,9 @@ bool fileSystem_init(void)
   if (LittleFS.begin(true)) // format on fail
   {
     Serial.println("Filesystem ready.");
+    Serial.printf("FS size: %d Bytes\n", LittleFS.totalBytes());
+    Serial.printf("FS used: %d Bytes\n", LittleFS.usedBytes());
+    Serial.printf("FS available: %d Bytes\n", LittleFS.totalBytes() - LittleFS.usedBytes());
     FSready = true;
     result = true;
   }
@@ -24,15 +27,25 @@ bool fileSystem_init(void)
   return result;
 }
 
+void fileSystemPrintInfo(void)
+{
+  Log("FS size: %d Bytes", LittleFS.totalBytes());
+  Log("FS used: %d Bytes", LittleFS.usedBytes());
+  Log("FS available: %d Bytes", LittleFS.totalBytes() - LittleFS.usedBytes());
+}
+
 //==================================================================================================================
 
 bool saveToFile(String *TextToWrite)
 {
   size_t fileSize = 0;
+  size_t AvailableSpace = 0;
   bool result = false;
 
+  AvailableSpace = LittleFS.totalBytes() - LittleFS.usedBytes();
+
   fileSize = getFileSize(LOG_FILE_wPATH);
-  if (fileSize > 2500000)
+  if ((fileSize + TextToWrite->length()) > (AvailableSpace - 500))
   {
     LogNS("File too big. (%u B)  Can't save data.\n", (uint32_t)(fileSize));
     return true; // clear buffer of collected data

@@ -16,7 +16,7 @@ bool TempSensorInit(void)
     // analogSetCycles(128); // long sampling time
     int val = analogRead(TEMP_SENS_PIN);
     Log("ADC = %d", val);
-    if ((val > 1300) && (val < 2100)) // 2033 = cold (22 C); 1400 warm (38 C)
+    if ((val > 1300) && (val < 2200)) // 2033 = cold (22 C); 1400 warm (38 C)
         return true;
     else
         return false;

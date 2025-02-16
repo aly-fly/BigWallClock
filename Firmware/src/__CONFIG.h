@@ -13,7 +13,7 @@
 // ************ General config *********************
 #define DEBUG_OUTPUT
 #define DBG_SOCKET_ENABLED 1
-#define DBG_SOCKET_PORT 21
+#define DBG_SOCKET_PORT 23
 
 #define DEVICE_NAME "WallClock"
 #define WIFI_CONNECT_TIMEOUT_SEC 240  // How long to wait for WiFi
@@ -62,8 +62,8 @@
 // VSPI bus is normally attached to pins 5, 18, 19 and 23, but can be matrixed to any pins
 #define VSPI_nCS           GPIO_NUM_5
 #define VSPI_SCK           GPIO_NUM_18
-#define VSPI_MISO          GPIO_NUM_19
-#define VSPI_MOSI          GPIO_NUM_23
+#define VSPI_MISO          GPIO_NUM_19 // SDO
+#define VSPI_MOSI          GPIO_NUM_23 // SDI
 
 #define HIGH_POWER      50
 #define LOW_POWER       33
@@ -84,6 +84,7 @@
 // ************ LED *********************
 
 #define WS2812_LED_PIN   GPIO_NUM_32
+#define SYS_LED_PIN      GPIO_NUM_2
 
 #define LOG_FILE_wPATH "/log.txt"
 
@@ -93,9 +94,8 @@
                               "  1..0E   -> Enable clock\n" \
                               "  1..0T   -> Test mode\n" \
                               "  1..9C   -> Constant speed\n" \
-                              "  P       -> Encoder position?\n" \
                               "  G       -> Encoder air gap? (loop)\n" \
-                              "  S       -> Motor status?\n" \
+                              "  S       -> System status?\n" \
                               " LL       -> Print log contents\n" \
                               " DL       -> Delete log file\n"
 
