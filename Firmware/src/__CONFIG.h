@@ -84,8 +84,12 @@
 
 // ************ LED *********************
 
-#define WS2812_LED_PIN   GPIO_NUM_32
-#define SYS_LED_PIN      GPIO_NUM_2
+#define WS2812_LED_PIN     GPIO_NUM_32
+#define SECONDS_DOT_COLOR  LED_WHTdim
+
+#define SYS_LED_PIN        GPIO_NUM_2
+
+// ************ LOG *********************
 
 #define LOG_FILE_wPATH "/log.txt"
 

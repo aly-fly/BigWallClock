@@ -18,21 +18,26 @@ void OTA_init(void)
 {
   ArduinoOTA.setRebootOnSuccess(true);
 
-  ArduinoOTA.onStart([]() {
-    const char* msga = "OTA Update Started";
-    const char* msgb = "" ;
-    if ( ArduinoOTA.getCommand() == U_FLASH ) {
-      msgb = "Type: sketch";
-    } else {
-      msgb = "Type: filesystem" ;                     // U_SPIFFS, U_LITTLEFS
-    }
-    Log(msga);                    // Show messages in debug
-    Log(msgb);
-    // stop any interrupts or background tasks here...
-    // ...
-  });
+  ArduinoOTA.onStart([]()
+                     {
+                       const char *msga = "OTA Update Started";
+                       const char *msgb = "";
+                       if (ArduinoOTA.getCommand() == U_FLASH)
+                       {
+                         msgb = "Type: sketch";
+                       }
+                       else
+                       {
+                         msgb = "Type: filesystem"; // U_SPIFFS, U_LITTLEFS
+                       }
+                       Log(msga); // Show messages in debug
+                       Log(msgb);
+                       // stop any interrupts or background tasks here...
+                       // ...
+                     });
 
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
+                        {
     int percent = (progress * 100) / total;
     LogNS("Progress: %u%%\r\n", percent);
     LED_showProgress(percent);
@@ -41,15 +46,18 @@ void OTA_init(void)
     {
       LEDbuiltin_Toggle();
       divisor = 0;
-    }
-  });
+    } });
 
-  ArduinoOTA.onEnd([]() {
+  ArduinoOTA.onEnd([]()
+                   {
     const char* msg = "OTA Done!" ;
     Log(msg) ;                     // Show message in debug
-  });
+    
+    LED_allSameColor(LED_GRNdim, true);
+    delay (200); });
 
-  ArduinoOTA.onError([](ota_error_t error) {
+  ArduinoOTA.onError([](ota_error_t error)
+                     {
     const char* msga = "OTA Error" ;
     const char* msgb = "" ;
     if ( error == OTA_AUTH_ERROR )
@@ -74,16 +82,18 @@ void OTA_init(void)
     }
     Log(msga) ;                    // Show messages in debug
     Log(msgb) ;
-  });
 
-  ArduinoOTA.begin();                                 // Initialize
+    LED_allSameColor(LED_REDdim, true);
+    delay (200); });
+
+  ArduinoOTA.begin(); // Initialize
 }
 
 //**************************************************************************************************
 
 void OTA_loop(void)
 {
-  ArduinoOTA.handle() ;                           // Check for OTA
+  ArduinoOTA.handle(); // Check for OTA
 }
 
 //**************************************************************************************************

@@ -5,6 +5,7 @@ void LED_init(void);
 void LED_Dimming (byte dim);
 void LED_color(int LedNum, uint32_t RGB, bool UpdateNow = false);
 void LED_clear(bool UpdateNow);
+void LED_allSameColor(uint32_t RGB, bool UpdateNow);
 void LED_showProgress(int percent);
 
 void LED_test(void);

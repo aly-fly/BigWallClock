@@ -141,7 +141,8 @@ int ErrorCounter = 0;
 bool ErrorCounterLogged = false;
 
 String sSerialCmd;
-int LEDlastUpdate = 0; // limit refresh rate
+int LEDlastUpdateSec = 0; // limit refresh rate
+unsigned long LEDlastUpdateMS = 0;
 int LastHour = -1;
 float MotorTemperature = 0;
 float MotorTempLastLogged = -100;
@@ -321,11 +322,9 @@ void loop()
     LastHour = CurrentHour;
   }
 
-  if (LEDlastUpdate != CurrentSecond) // limit to 1x per second
+  if (LEDlastUpdateSec != CurrentSecond) // limit to 1x per second
   {
     byte LedNum;
-    uint32_t LedColor = LED_WHTdim;
-
     if (CurrentSecond == 0)
     {
       LED_clear(false);
@@ -335,9 +334,22 @@ void loop()
     {
       LED_color(LedNum - 2, 0, false); // clear previous one
     }
-    LED_color(LedNum, LedColor, true);
+    LED_color(LedNum, SECONDS_DOT_COLOR, true);
 
-    LEDlastUpdate = CurrentSecond;
+    LEDlastUpdateSec = CurrentSecond;
+    LEDlastUpdateMS = millis();
+  }
+  // half-second dot
+  if ((millis() - LEDlastUpdateMS) > 450)
+  {
+    byte LedNum = CurrentSecond * 2 + 1;
+    if (LedNum >= 3)
+    {
+      LED_color(LedNum - 2, 0, false); // clear previous one
+    }
+    LED_color(LedNum, SECONDS_DOT_COLOR, true);
+
+    LEDlastUpdateMS = millis();
   }
 
   //========================================================================================================

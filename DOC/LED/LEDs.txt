@@ -1,0 +1,5 @@
+
+4 Mbit's -> 1 bit = 0,25 us
+
+0,25 us HI / 1,00 us LOW
+1,00 us HI / 0,25 us LOW
