@@ -9,7 +9,7 @@
 
 - automatic timezone / DST adjust
 
-- Web socket responding even when startup is blocked (callback functions?)
+- Web socket responding even when startup is blocked by an error (separate function for terminal?)
 
 - prevent fast repetitive logs to be saved into the file
 

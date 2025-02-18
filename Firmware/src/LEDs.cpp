@@ -11,6 +11,7 @@
 
 #define NR_OF_LEDS 128
 #define NR_OF_ALL_BITS 24 * NR_OF_LEDS
+#define LED_OFFSET  64
 
 byte Dimming = 255;
 
@@ -121,12 +122,15 @@ void LEDtransmitData(void)
 
 void LED_color(int LedNum, uint32_t RGB, bool UpdateNow)
 {
-    if ((LedNum < 0) || (LedNum >= NR_OF_LEDS) || (Dimming == 0))
+    int LedNumOffset = LedNum - LED_OFFSET;
+    if (LedNumOffset < 0) LedNumOffset += NR_OF_LEDS;
+
+    if ((LedNumOffset < 0) || (LedNumOffset >= NR_OF_LEDS) || (Dimming == 0))
         return;
 
-    LEDdata[LedNum].Red = (((RGB >> 16) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNum].Green = (((RGB >> 8) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNum].Blue = (((RGB) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNumOffset].Red   = (((RGB >> 16) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNumOffset].Green = (((RGB >>  8) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNumOffset].Blue  = (((RGB)       & 0xFF) * Dimming) >> 8;
 
     if (UpdateNow)
     {
@@ -163,9 +167,9 @@ void LED_allSameColor(uint32_t RGB, bool UpdateNow)
 {
     for (int LedNum = 0; LedNum < NR_OF_LEDS; LedNum++)
     {
-        LEDdata[LedNum].Red = ((RGB >> 16) & 0xFF) >> 8;
-        LEDdata[LedNum].Green = ((RGB >> 8) & 0xFF) >> 8;
-        LEDdata[LedNum].Blue = ((RGB) & 0xFF) >> 8;
+        LEDdata[LedNum].Red =   (RGB >> 16) & 0xFF;
+        LEDdata[LedNum].Green = (RGB >>  8) & 0xFF;
+        LEDdata[LedNum].Blue =  (RGB      ) & 0xFF;
     }
     if (UpdateNow)
     {
@@ -173,20 +177,18 @@ void LED_allSameColor(uint32_t RGB, bool UpdateNow)
     }
 }
 
-void LED_showProgress(int percent)
+void LED_showProgress(int percent, uint32_t dotColor, uint32_t trailColor)
 {
-    int idx;
+ // int idx = (int)round(((float)percent * NR_OF_LEDS) / 100);
+    int idx = ((percent * ((NR_OF_LEDS * 2) + 1)) / 200); // + 0.5 to show both 0% and 100%
     uint32_t color;
     for (int i = 0; i < NR_OF_LEDS; i++)
     {
-        // idx = (int)round(((float)percent * NR_OF_LEDS) / 100);
-        idx = ((percent * ((NR_OF_LEDS * 2) + 1)) / 200); // + 0.5 to show both 0% and 100%
-        if (idx < i)
-            color = LED_GRNdim;
-        else if (idx == i)
-            color = LED_GRNbright;
-        else
-            color = 0x000303; // dim blue/green
+        if (i < idx)
+            color = trailColor;
+        else if (i == idx)
+            color = dotColor;
+        else color = 0; // 0x000505; // dim blue/green
         LED_color(i, color, false);
     }
     LEDtransmitData();
@@ -202,15 +204,15 @@ void LED_test(void)
         switch (i % 3)
         {
         case 0:
-            color = LED_REDbright;
+            color = clREDdim;
             break;
 
         case 1:
-            color = LED_GRNbright;
+            color = clGREENdim;
             break;
 
         default:
-            color = LED_BLUbright;
+            color = clBLUEdim;
             break;
         }
         LED_color(i, color, true);

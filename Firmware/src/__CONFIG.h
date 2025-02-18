@@ -24,11 +24,8 @@
 #define DST_OFFSET  1
 
 #define DAY_TIME       7
-#define EVENING_TIME  21
+#define EVENING_TIME  22
 #define NIGHT_TIME    23
-
-#define EVENING_TIME_DIMMING    14
-#define DAY_TIME_BRIGHTNESS  200  // max 255
 
 // ************ WiFi config *********************
 //#define WIFI_SSID  "..." -> enter into the file __CONFIG_SECRETS.h
@@ -84,8 +81,12 @@
 
 // ************ LED *********************
 
-#define WS2812_LED_PIN     GPIO_NUM_32
-#define SECONDS_DOT_COLOR  LED_WHTdim
+#define WS2812_LED_PIN      GPIO_NUM_32
+#define SECONDS1_DOT_COLOR  clWHITEdim
+#define SECONDS2_DOT_COLOR  clBLUEbright
+
+#define EVENING_TIME_DIMMING     14
+#define DAY_TIME_BRIGHTNESS     200  // max 255
 
 #define SYS_LED_PIN        GPIO_NUM_2
 

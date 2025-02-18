@@ -181,7 +181,7 @@ bool MotorGetStatusOk(bool PrintAlways)
   // this flag should not be set; reading is probably incorrect. Read again.
   if (!(iStatus & STATUS_nUVLO_ADC))
   {
-    delay(5);
+    delay(50);
     iStatus = driver.getStatus();
   }  
 

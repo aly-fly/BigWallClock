@@ -18,6 +18,9 @@
 #include "fileSystem.h"
 #include "TcpSocket.h"
 #include "OTA.h"
+#include "SerialCommands.h"
+
+void MainLoopBackgroundTasks(void);
 
 void setup()
 {
@@ -47,59 +50,81 @@ void setup()
       yield();
   }
 
-  LED_color(0, LED_ORANGE, true);
+  uint32_t tailColor = clBLUEdim;
+  LED_showProgress(10, clORANGEbright, tailColor);
   if (fileSystem_init())
-    LED_color(0, LED_BLUbright, true);
+    LED_showProgress(15, clBLUEbright, tailColor);
   else
-    LED_color(0, LED_REDbright, true);
+  {
+    tailColor = clREDdim;
+    LED_showProgress(15, clREDbright, tailColor);
+  }
   delay(200);
 
-  LED_color(1, LED_ORANGE, true);
+  LED_showProgress(20, clORANGEbright, tailColor);
   if (WifiInit())
-    LED_color(1, LED_BLUbright, true);
+    LED_showProgress(25, clBLUEbright, tailColor);
   else
-    LED_color(1, LED_REDbright, true);
+  {
+    tailColor = clREDdim;
+    LED_showProgress(25, clREDbright, tailColor);
+  }
   delay(200);
   startTcpSocket();
   OTA_init();
 
-  LED_color(2, LED_ORANGE, true);
+  LED_showProgress(30, clORANGEbright, tailColor);
   if (encoderInit())
-    LED_color(2, LED_BLUbright, true);
+    LED_showProgress(35, clBLUEbright, tailColor);
   else
   {
-    LED_color(2, LED_REDbright, true);
-    Log("ENCODER INIT FAILED. HALTED.") while (1) yield(); // stop here
+    tailColor = clREDdim;
+    LED_showProgress(35, clREDbright, tailColor);
+    Log("ENCODER INIT FAILED. HALTED.");
+    while (1) // stop here
+    {
+      MainLoopBackgroundTasks();
+    }
   }
   delay(200);
 
-  LED_color(3, LED_ORANGE, true);
+  LED_showProgress(40, clORANGEbright, tailColor);
   if (MotorInit())
-    LED_color(3, LED_BLUbright, true);
+    LED_showProgress(45, clBLUEbright, tailColor);
   else
   {
-    LED_color(3, LED_REDbright, true);
-    Log("MOTOR INIT FAILED. HALTED.") while (1) yield(); // stop here
+    tailColor = clREDdim;
+    LED_showProgress(45, clREDbright, tailColor);
+    Log("MOTOR INIT FAILED. HALTED.");
+    while (1) // stop here
+    {
+      MainLoopBackgroundTasks();
+    }
   }
   delay(200);
 
-  LED_color(4, LED_ORANGE, true);
+  LED_showProgress(50, clORANGEbright, tailColor);
   if (MotorInit() & TempSensorInit())
-    LED_color(4, LED_BLUbright, true);
+    LED_showProgress(55, clBLUEbright, tailColor);
   else
   {
-    LED_color(4, LED_REDbright, true);
-    Log("TEMP SENSOR INIT FAILED. HALTED.") while (1) yield(); // stop here
+    tailColor = clREDdim;
+    LED_showProgress(55, clREDbright, tailColor);
+    Log("TEMP SENSOR INIT FAILED. HALTED.");
+    while (1) // stop here
+    {
+      MainLoopBackgroundTasks();
+    }
   }
   delay(200);
 
-  LED_color(5, LED_ORANGE, true);
+  LED_showProgress(60, clORANGEbright, tailColor);
   setClock();
-  LED_color(5, LED_BLUbright, true);
+  LED_showProgress(65, clBLUEbright, tailColor);
   delay(200);
 
   EnableMotor(true);
-  LED_color(6, LED_BLUbright, true);
+  LED_showProgress(70, clBLUEbright, tailColor);
   delay(200);
 
   /*
@@ -123,7 +148,7 @@ void setup()
 
   LEDbuiltin_OFF();
   LED_clear(false);
-  LED_color(0, LED_GRNdim, true);
+  LED_color(0, clGREENbright, true);
 }
 
 // ===============================================================================================================================================================
@@ -137,10 +162,8 @@ int TimeCurrent, TimeDisplayed; // 0...131'071 (2^17)
 int delta;                      // positive -> move forward
 float speedAdj, speedAdjFiltered, speedMotor;
 bool filterValid = false;
-int ErrorCounter = 0;
 bool ErrorCounterLogged = false;
 
-String sSerialCmd;
 int LEDlastUpdateSec = 0; // limit refresh rate
 unsigned long LEDlastUpdateMS = 0;
 int LastHour = -1;
@@ -235,7 +258,7 @@ void loop()
   }
 
   MotorTemperature = TempSensorRead();
-  if (abs(MotorTempLastLogged - MotorTemperature) > 3)
+  if (abs(MotorTempLastLogged - MotorTemperature) > 4)
   {
     Log("Motor temperature = %.1f C", MotorTemperature);
     MotorTempLastLogged = MotorTemperature;
@@ -266,19 +289,19 @@ void loop()
 
   if ((ErrorCounter == 0) && ClockEnabled)
   {
-    LED_color(0, LED_GRNdim);
+    LED_color(LEDStatusLocation, clGREENdim);
   }
   else
   {
     if (!ClockEnabled)
     {
-      LED_color(0, LED_REDbright);
+      LED_color(LEDStatusLocation, clREDbright);
     }
     else
     {
       if (ErrorCounter > 0)
       {
-        LED_color(0, LED_ORANGE);
+        LED_color(LEDStatusLocation, clORANGEbright);
       }
     }
   }
@@ -289,14 +312,14 @@ void loop()
     Log("Error counter exceeded threshold. Clock disabled.");
     EnableMotor(false);
     ClockEnabled = false;
-    LED_color(0, LED_REDbright, true);
+    LED_color(LEDStatusLocation, clREDbright, true);
   }
   if ((ErrorCounter < 10) && !ClockEnabled && !TestMode)
   {
     Log("Error counter ok. Clock enabled.");
     EnableMotor(true);
     ClockEnabled = true;
-    LED_color(0, LED_GRNdim, true);
+    LED_color(LEDStatusLocation, clGREENdim, true);
   }
 
   //========================================================================================================
@@ -334,7 +357,7 @@ void loop()
     {
       LED_color(LedNum - 2, 0, false); // clear previous one
     }
-    LED_color(LedNum, SECONDS_DOT_COLOR, true);
+    LED_color(LedNum, SECONDS1_DOT_COLOR, true);
 
     LEDlastUpdateSec = CurrentSecond;
     LEDlastUpdateMS = millis();
@@ -347,151 +370,23 @@ void loop()
     {
       LED_color(LedNum - 2, 0, false); // clear previous one
     }
-    LED_color(LedNum, SECONDS_DOT_COLOR, true);
+    LED_color(LedNum, SECONDS2_DOT_COLOR, true);
 
     LEDlastUpdateMS = millis();
   }
 
   //========================================================================================================
 
-  // RX commands
-  if (Serial.available() > 0)
-  {
-    sSerialCmd.concat(Serial.readString()); // add new data to the existing queue
-  }
-  if (DataAvailableInSocket())
-  {
-    sSerialCmd.concat(ReadFromSocket()); // add new data to the existing queue
-  }
-  if (sSerialCmd.length() >= 2)
-  {
-    int pp = sSerialCmd.indexOf('\r'); // find first command
-    if (pp > 0)
-    {
-      char Cmd = sSerialCmd.charAt(pp - 1);
-      LogNS("=====================================================\r\n");
-      LogNS("Command received: %c\r\n", Cmd);
+  MainLoopBackgroundTasks();
 
-      switch (Cmd)
-      {
-      case 'M':
-        LogNS("-> Multiturn preset\r\n");
-        if (pp > 2)
-        {
-          char param1 = sSerialCmd.charAt(pp - 3);
-          char param2 = sSerialCmd.charAt(pp - 2);
-          param1 = param1 - '0';
-          param2 = param2 - '0';
-          uint16_t val = (param1 * 10) + param2;
-          if ((val >= 0) && (val <= 11))
-          {
-            LogNS("  New MT = %d\r\n", val);
-            EncoderSetMT(val);
-          }
-        }
-        encoderRead(true); // print new pos value
-        break;
+} // loop
 
-      case 'Z':
-        LogNS("-> Encoder zero\r\n");
-        EncoderSetZeroHere();
-        encoderRead(true); // print new pos value
-        break;
+  //========================================================================================================
 
-      case 'E':
-        LogNS("-> Enable clock\r\n");
-        if (pp > 1)
-        {
-          char param = sSerialCmd.charAt(pp - 2);
-          ClockEnabled = (param == '1');
-          EnableMotor(ClockEnabled);
-          ErrorCounter = 0;
-        }
-        break;
+  void MainLoopBackgroundTasks(void)
+{
 
-      case 'T':
-        LogNS("-> Test mode\r\n");
-        if (pp > 1)
-        {
-          char param = sSerialCmd.charAt(pp - 2);
-          TestMode = (param == '1');
-        }
-        break;
-
-      case 'C':
-        LogNS("-> Constant speed\r\n");
-        if (pp > 1)
-        {
-          byte param = sSerialCmd.charAt(pp - 2);
-          param = param - '0';
-          if ((param >= 0) && (param <= 9))
-          {
-            ClockEnabled = false;
-            TestMode = true;
-            int speed = 1 << param;
-            LogNS("  Speed = %d\r\n", speed);
-            MoveConstSpeed((float)speed, TestMode);
-          }
-        }
-        break;
-
-      case 'G':
-      {
-        LogNS("-> Encoder air gap?\r\n");
-        bool oldTM = TestMode;
-        TestMode = true; // do not save messages
-        for (int i = 0; i < 240; i++)
-        {
-          EnableMotor(false);
-          encoderReadAirGap();
-          delay(1000);
-        }
-        TestMode = oldTM;
-        break;
-      }
-
-      case 'S':
-        Log("-> System status?");
-        MotorGetStatusOk(true);
-        MotorTemperature = TempSensorRead();
-        Log("Motor temperature = %.1f C", MotorTemperature);
-
-        encoderRead(true);
-        encoderReadAirGap();
-
-        fileSystemPrintInfo();
-
-        Log("Free memory: %u bytes", esp_get_free_heap_size());
-        multi_heap_info_t info;
-        heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); // internal RAM, memory capable to store data or to create new task
-        Log("Largest available block: %u bytes", info.largest_free_block);
-        Log("Minimum free ever: %u bytes", info.minimum_free_bytes);
-        break;
-
-      case 'L':
-        LogNS("-> LOG\r\n");
-        if (pp > 1)
-        {
-          byte param = sSerialCmd.charAt(pp - 2);
-          switch (param)
-          {
-          case 'L':
-            ReadAndPrintContentsOfTheLog();
-            break;
-          case 'D':
-            DeleteLogFile();
-            break;
-          }
-        }
-        break;
-
-      default:
-        LogNS("-> Unknown\r\n");
-        break;
-      }
-      sSerialCmd.clear(); // process only one command in one main loop
-    } // pp > 0
-  } // cmd length > 2
+  ReceiveAndProcessSerialCommands();
 
   loggerPurgeToFile();
 
@@ -502,5 +397,4 @@ void loop()
   OTA_loop();
 
   delay(100);
-
-} // loop
+}

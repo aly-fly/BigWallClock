@@ -7,5 +7,6 @@
 extern bool NightMode;
 extern bool ClockEnabled;
 extern bool TestMode;
+extern int ErrorCounter;
 
 #endif //__GLOBALVARIABLES_H_
