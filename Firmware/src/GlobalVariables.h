@@ -8,5 +8,6 @@ extern bool NightMode;
 extern bool ClockEnabled;
 extern bool TestMode;
 extern int ErrorCounter;
+extern char * BootTime;
 
 #endif //__GLOBALVARIABLES_H_

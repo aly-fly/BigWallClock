@@ -79,6 +79,12 @@
 
 #define MOTOR_TEMP_MAX        55      // °C
 
+// ************ Encoder *********************
+
+#define CPR 131072
+#define CPR12 (CPR * 12)
+#define CPR12half (CPR * 5)
+
 // ************ LED *********************
 
 #define WS2812_LED_PIN      GPIO_NUM_32
@@ -101,9 +107,12 @@
                               "  1..0T   -> Test mode\r\n" \
                               "  1..9C   -> Constant speed\r\n" \
                               "  G       -> Encoder air gap? (loop)\r\n" \
+                              "  P       -> Encoder position? (loop)\r\n" \
                               "  S       -> System status?\r\n" \
                               " LL       -> Print log contents\r\n" \
-                              " DL       -> Delete log file\r\n"
+                              " DL       -> Delete log file\r\n" \
+                              "  R       -> Reboot\r\n" \
+                              "  ?       -> Print this message\r\n"
 
 
 #endif /* __CONFIG_H_ */

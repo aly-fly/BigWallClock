@@ -6,6 +6,7 @@
 #include "__CONFIG.h"
 #include "myWiFi.h"
 #include "Logger.h"
+#include "GlobalVariables.h"
 
 
 unsigned long LastTimeClockSynced = 0; // data is not valid
@@ -68,7 +69,8 @@ void setClock(void) {
   struct tm timeinfo;
   //gmtime_r(&nowSecs, &timeinfo);
   getLocalTime(&timeinfo);
-  Log("Current time: %s", asctime(&timeinfo));
+  BootTime = asctime(&timeinfo);
+  Log("Current time: %s", BootTime);
   
   LastTimeClockSynced = millis();
   GetCurrentTime(); // fill global variables

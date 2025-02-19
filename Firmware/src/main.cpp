@@ -19,6 +19,7 @@
 #include "TcpSocket.h"
 #include "OTA.h"
 #include "SerialCommands.h"
+#include "ResetReason.h"
 
 void MainLoopBackgroundTasks(void);
 
@@ -40,6 +41,7 @@ void setup()
   Log("Project: github.com/aly-fly/BigWallClock");
   Log("Version: %s", VERSION);
   Log("Build: %s", BUILD_TIMESTAMP);
+  Log( get_reset_reason().c_str() );
 
   LED_init();
 
@@ -152,10 +154,6 @@ void setup()
 }
 
 // ===============================================================================================================================================================
-
-#define CPR 131072
-#define CPR12 (CPR * 12)
-#define CPR12half (CPR * 5)
 
 int CurrentHour12, EncoderPosMT12;
 int TimeCurrent, TimeDisplayed; // 0...131'071 (2^17)

@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "__CONFIG.h"
 #include "GlobalVariables.h"
 #include "Clock.h"
 #include "motorDriver.h"
@@ -10,6 +11,7 @@
 #include "Logger.h"
 #include "fileSystem.h"
 #include "TcpSocket.h"
+#include "ResetReason.h"
 
 String sSerialCmd;
 
@@ -104,13 +106,31 @@ void ReceiveAndProcessSerialCommands(void)
 
             case 'G':
             {
-                LogNS("-> Encoder air gap?\r\n");
+                LogNS("-> Encoder air gap? (loop)\r\n");
                 bool oldTM = TestMode;
                 TestMode = true; // do not save messages
+                EnableMotor(false);
                 for (int i = 0; i < 240; i++)
                 {
-                    EnableMotor(false);
                     encoderReadAirGap();
+                    delay(1000);
+                }
+                TestMode = oldTM;
+                break;
+            }
+
+            case 'P':
+            {
+                LogNS("-> Encoder position? (loop)\r\n");
+                bool oldTM = TestMode;
+                TestMode = true; // do not save messages
+                EnableMotor(false);
+                float ClocklPos;
+                for (int i = 0; i < 240; i++)
+                {
+                    encoderRead(false);
+                    ClocklPos = ((float)EncoderPosST * 12) / CPR;
+                    LogNS("Clock position: %.2f\r\n", ClocklPos);
                     delay(1000);
                 }
                 TestMode = oldTM;
@@ -120,6 +140,8 @@ void ReceiveAndProcessSerialCommands(void)
             case 'S':
             {
                 Log("-> System status?");
+                Log( get_reset_reason().c_str() );
+                Log("Boot time: %s", BootTime);
                 MotorGetStatusOk(true);
                 Log("Motor temperature = %.1f C", TempSensorRead());
 
@@ -153,6 +175,19 @@ void ReceiveAndProcessSerialCommands(void)
                     }
                 }
                 break;
+            }
+
+            case 'R':
+            {
+                Log("-> Reboot!");
+                EnableMotor(false);
+                ESP.restart();
+            }
+
+            case '?':
+            {
+                SendToSocket(SERIAL_COMMANDS_LIST);
+                SendToSocket("\r\n");
             }
 
             default:
