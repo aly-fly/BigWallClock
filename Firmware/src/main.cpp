@@ -106,7 +106,7 @@ void setup()
   delay(200);
 
   LED_showProgress(50, clORANGEbright, tailColor);
-  if (MotorInit() & TempSensorInit())
+  if (TempSensorInit())
     LED_showProgress(55, clBLUEbright, tailColor);
   else
   {
@@ -175,7 +175,8 @@ void loop()
     if (ClockEnabled)
     {
       speedAdj = 0;
-      if (encoderRead(TestMode))
+//    if (encoderRead(TestMode))
+      if (encoderRead(false)) // print only if encoder encounters an error
       {
         if (!EncoderError)
         {
@@ -277,6 +278,7 @@ void loop()
   if ((ErrorCounter > 20) && (!ErrorCounterLogged))
   {
     Log("ErrorCounter increasing!");
+    encoderRead(true); // log position
     ErrorCounterLogged = true;
   }
   if ((ErrorCounter == 0) && (ErrorCounterLogged))

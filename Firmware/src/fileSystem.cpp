@@ -4,6 +4,8 @@
 #include "__CONFIG.h"
 #include "Logger.h"
 
+void MainLoopBackgroundTasks(void);
+
 bool FSready = false;
 
 bool fileSystem_init(void)
@@ -98,11 +100,17 @@ void ReadAndPrintContentsOfTheLog(void)
   else
   {
     LogNS("File open.\r\n");
-
+    int i = 0;
     while (file.available()) 
     {
       char c = file.read();
       LogNSc(c);
+      i++;
+      if (i > 1000)
+      {
+        i = 0;
+        MainLoopBackgroundTasks();
+      }
     }
 
     LogNS("======================== EOF ============================= \r\n");

@@ -167,6 +167,7 @@ void ReceiveAndProcessSerialCommands(void)
                     switch (param)
                     {
                     case 'L':
+                        sSerialCmd.clear(); // otherwise it loops recursively
                         ReadAndPrintContentsOfTheLog();
                         break;
                     case 'D':
