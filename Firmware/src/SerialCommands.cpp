@@ -141,7 +141,7 @@ void ReceiveAndProcessSerialCommands(void)
             {
                 Log("-> System status?");
                 Log( get_reset_reason().c_str() );
-                Log("Boot time: %s", BootTime);
+                Log("Boot time: %s.", BootTime);
                 MotorGetStatusOk(true);
                 Log("Motor temperature = %.1f C", TempSensorRead());
 

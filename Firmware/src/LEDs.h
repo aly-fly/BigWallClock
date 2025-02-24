@@ -21,4 +21,7 @@ void LED_test(void);
 #define clORANGEdim    0x663300
 #define clORANGEbright 0xFF7F00
 
-#define LEDStatusLocation 64 // at the bottom
+#define clPINKbright   0xFF00FF
+
+//#define LEDStatusLocation 64 // at the bottom
+#define LEDStatusLocation 127 // at the top

@@ -70,7 +70,7 @@ void setClock(void) {
   //gmtime_r(&nowSecs, &timeinfo);
   getLocalTime(&timeinfo);
   BootTime = asctime(&timeinfo);
-  Log("Current time: %s", BootTime);
+  Log("Current time: %s.", BootTime);
   
   LastTimeClockSynced = millis();
   GetCurrentTime(); // fill global variables

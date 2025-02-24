@@ -4,9 +4,12 @@
 
 #include <stdint.h>
 
-extern bool NightMode;
+//enum ClockStatus_t {stOK, stWarning, stError};
+
 extern bool ClockEnabled;
 extern bool TestMode;
+extern bool ClockError;
+extern bool ClockWarning;
 extern int ErrorCounter;
 extern char * BootTime;
 

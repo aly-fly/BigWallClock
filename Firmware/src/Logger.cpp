@@ -9,20 +9,31 @@ char int_logbuffer[150];
 char timebuf[20];
 String CollectForSaving;
 unsigned long LastTimeSaved = 0;
+int16_t checksum = 999;
+int16_t checksumLastMsg;
+bool SaveNewMsg;
 
 void int_log(void)
 {
+    checksumLastMsg = checksum;
+    checksum = 0;
+    for (int i = 0; i < 20; i++) // read first X chars for comparison with last message - prevent saving repetitive messages
+    {
+        checksum += (uint16_t)int_logbuffer[i];
+    }
+    SaveNewMsg = (abs(checksum - checksumLastMsg) > 3); // new msg is different enough for saving to file
+    
     if (CurrentYear != 0) // time is initialized
     {
         GetCurrentTime();
         sprintf(timebuf, "[%d.%d. %02d:%02d:%02d] ", CurrentDay, CurrentMonth, CurrentHour, CurrentMinute, CurrentSecond);
         Serial.print(timebuf);
         SendToSocket(timebuf);
-        if (!TestMode)
+        if ((!TestMode) && (SaveNewMsg))
             CollectForSaving.concat(timebuf);
     }
     Serial.println(int_logbuffer);
-    if (!TestMode)
+    if ((!TestMode) && (SaveNewMsg))
     {
         CollectForSaving.concat(int_logbuffer);
         CollectForSaving.concat("\r\n");

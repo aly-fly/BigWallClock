@@ -112,7 +112,7 @@ bool encoderRead(bool PrintData)
 
             if ((EncoderDetailedStatus != 0) || PrintData)
             {
-                Log("Encoder: MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
+                Log("Encoder: MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X.", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
                 String sDetStatus;
                 if ((EncoderDetailedStatus & 0x8000) > 0)
                     sDetStatus.concat("Multiturn error  ");
@@ -143,7 +143,7 @@ bool encoderRead(bool PrintData)
                 if ((EncoderDetailedStatus & 0x0001) > 0)
                     sDetStatus.concat("Acceleration error  ");
                 if (sDetStatus.length() > 2)
-                    Log("Encoder status:  %s", sDetStatus.c_str());
+                    Log("Encoder status:  %s.", sDetStatus.c_str());
             }
             result = true;
         }

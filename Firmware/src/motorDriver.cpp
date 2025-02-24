@@ -178,17 +178,17 @@ bool MotorGetStatusOk(bool PrintAlways)
     delay(5);
     iStatus = driver.getStatus();
   }
-  // this flag should not be set; reading is probably incorrect. Read again.
-  if (!(iStatus & STATUS_nUVLO_ADC))
+  // this is some errorneous status; reading is probably incorrect. Read again.
+  if (iStatus == 0xd000)
   {
-    delay(50);
+    delay(150);
     iStatus = driver.getStatus();
   }  
 
   ActiveErrors = "0x" + String(iStatus, HEX);  
   if (!(iStatus & STATUS_nSTALL_A))  ActiveErrors.concat("  STALL_A"); // STALL_A and STALL_B flags are forced low when a stall condition is detected on bridge A or bridge B 
   if (!(iStatus & STATUS_nSTALL_B))  ActiveErrors.concat("  STALL_B"); // respectively. The stall detection is operative only when the voltage mode control is selected. 
-  if (!(iStatus & STATUS_nOCD))      ActiveErrors.concat("  OCD overcurrent");  
+  if (!(iStatus & STATUS_nOCD))      ActiveErrors.concat("  OCD_overcurrent");  
   if ( (iStatus & 0x1000))           ActiveErrors.concat("  TH 12");  
   if ( (iStatus & 0x0800))           ActiveErrors.concat("  TH 11");  
   if (!(iStatus & STATUS_nUVLO_ADC)) ActiveErrors.concat("  UVLO_ADC"); // The UVLO_ADC flag is active low and indicates an ADC undervoltage event. 

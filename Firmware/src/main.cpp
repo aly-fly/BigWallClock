@@ -41,7 +41,7 @@ void setup()
   Log("Project: github.com/aly-fly/BigWallClock");
   Log("Version: %s", VERSION);
   Log("Build: %s", BUILD_TIMESTAMP);
-  Log( get_reset_reason().c_str() );
+  Log(get_reset_reason().c_str());
 
   LED_init();
 
@@ -168,14 +168,18 @@ int LastHour = -1;
 float MotorTemperature = 0;
 float MotorTempLastLogged = -100;
 
+int heartBeatLed = 0;
+
 void loop()
 {
+  ClockWarning = false;
+  ClockError = false;
+
   if (GetCurrentTime())
   {
     if (ClockEnabled)
     {
       speedAdj = 0;
-//    if (encoderRead(TestMode))
       if (encoderRead(false)) // print only if encoder encounters an error
       {
         if (!EncoderError)
@@ -217,14 +221,22 @@ void loop()
         else
         { // encoder error
           filterValid = false;
+          ClockError = true;
         }
 
         if ((EncoderPosMT == 12) && (EncoderPosST > 100))
+        {
           EncoderSetMT(0);
+        }
+        if (EncoderWarning)
+        {
+          ClockWarning = true;
+        }
       } // encoder read ok
       else
       { // reading encoder failed
         filterValid = false;
+        ClockError = true;
       }
 
       // 400 steps = 1 hour = 60 min = 3600 s
@@ -241,7 +253,7 @@ void loop()
     else
     {
       filterValid = false;
-      if (encoderRead(true))
+      if (encoderRead(false)) // print only if encoder encounters an error
         if ((EncoderPosMT == 12) && (EncoderPosST > 100))
           EncoderSetMT(0);
     } // clock not enabled
@@ -249,6 +261,7 @@ void loop()
   else
   {
     Log("Getting current time failed!");
+    ClockError = true;
   }
 
   if (!MotorGetStatusOk())
@@ -262,10 +275,26 @@ void loop()
     Log("Motor temperature = %.1f C", MotorTemperature);
     MotorTempLastLogged = MotorTemperature;
   }
-  if (MotorTemperature > MOTOR_TEMP_MAX)
+  if (MotorTemperature > (MOTOR_TEMP_MAX + 5))
+  {
+    Log("Motor too hot! Temperature = %.1f C", MotorTemperature);
+    ErrorCounter = 4000;
+    ClockError = true;
+    // disable immediatelly
+    EnableMotor(false);
+    ClockEnabled = false;
+  }
+  else if (MotorTemperature > MOTOR_TEMP_MAX)
   {
     Log("Motor overheating! Temperature = %.1f C", MotorTemperature);
-    ErrorCounter += 2;
+    ErrorCounter += 30;
+    ClockWarning = true;
+  }
+  if (MotorTemperature < 10)
+  {
+    Log("Reading motor temperature failed! Temperature = %.1f C", MotorTemperature);
+    ErrorCounter = 4000;
+    ClockError = true;
   }
 
   //========================================================================================================
@@ -287,40 +316,26 @@ void loop()
     ErrorCounterLogged = false;
   }
 
-  if ((ErrorCounter == 0) && ClockEnabled)
-  {
-    LED_color(LEDStatusLocation, clGREENdim);
-  }
-  else
-  {
-    if (!ClockEnabled)
-    {
-      LED_color(LEDStatusLocation, clREDbright);
-    }
-    else
-    {
-      if (ErrorCounter > 0)
-      {
-        LED_color(LEDStatusLocation, clORANGEbright);
-      }
-    }
-  }
-
   // if clock is not correctly adjusted in 100 seconds or motor error is read 10 times then disable motor for 500 seconds (cool down)
   if ((ErrorCounter > 3000) && ClockEnabled && !TestMode)
   {
     Log("Error counter exceeded threshold. Clock disabled.");
     EnableMotor(false);
     ClockEnabled = false;
-    LED_color(LEDStatusLocation, clREDbright, true);
+    ClockError = true;
   }
   if ((ErrorCounter < 10) && !ClockEnabled && !TestMode)
   {
     Log("Error counter ok. Clock enabled.");
     EnableMotor(true);
     ClockEnabled = true;
-    LED_color(LEDStatusLocation, clGREENdim, true);
   }
+
+  if (ErrorCounter > 0)
+    ClockWarning = true;
+
+  if (ErrorCounter > 1000)
+    ClockError = true;
 
   //========================================================================================================
 
@@ -357,7 +372,7 @@ void loop()
     {
       LED_color(LedNum - 2, 0, false); // clear previous one
     }
-    LED_color(LedNum, SECONDS1_DOT_COLOR, true);
+    LED_color(LedNum, SECONDS1_DOT_COLOR, false);
 
     LEDlastUpdateSec = CurrentSecond;
     LEDlastUpdateMS = millis();
@@ -370,10 +385,19 @@ void loop()
     {
       LED_color(LedNum - 2, 0, false); // clear previous one
     }
-    LED_color(LedNum, SECONDS2_DOT_COLOR, true);
+    LED_color(LedNum, SECONDS2_DOT_COLOR, false);
 
     LEDlastUpdateMS = millis();
   }
+
+  if (ClockError)
+    LED_color(LEDStatusLocation, clREDbright, true);
+  else if (ClockWarning)
+    LED_color(LEDStatusLocation, clORANGEbright, true);
+  else if (ClockEnabled)
+    LED_color(LEDStatusLocation, clGREENdim, true);
+  else
+    LED_color(LEDStatusLocation, clPINKbright, true);
 
   //========================================================================================================
 
@@ -381,9 +405,9 @@ void loop()
 
 } // loop
 
-  //========================================================================================================
+//========================================================================================================
 
-  void MainLoopBackgroundTasks(void)
+void MainLoopBackgroundTasks(void)
 {
 
   ReceiveAndProcessSerialCommands();
@@ -392,9 +416,14 @@ void loop()
 
   LoopSocketServer();
 
-  LEDbuiltin_Toggle(); // toggle onboard LED
-
   OTA_loop();
 
   delay(100);
+
+  heartBeatLed++;
+  if (heartBeatLed >= 10)
+  {
+    LEDbuiltin_Toggle(); // toggle onboard LED
+    heartBeatLed = 0;
+  }
 }
