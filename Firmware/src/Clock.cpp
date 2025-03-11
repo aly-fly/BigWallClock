@@ -11,8 +11,6 @@
 
 unsigned long LastTimeClockSynced = 0; // data is not valid
 
-
-// Required for WiFiClientSecure and for checks the validity date of the certificate. 
 void setClock(void) {
   //Log("setClock()");
 
@@ -54,7 +52,10 @@ void setClock(void) {
     return;  // clock is already synced
   }
 
-  configTime(GMT_OFFSET*60*60, DST_OFFSET*60*60, TIME_SERVER1, TIME_SERVER2);
+
+  //  configTime(GMT_OFFSET*60*60, DST_OFFSET*60*60, TIME_SERVER1, TIME_SERVER2);
+  configTime(0, 0, TIME_SERVER1, TIME_SERVER2, TIME_SERVER3);
+  setenv("TZ", TIMEZONE, 1); // https://github.com/nayarsystems/posix_tz_db/
 
   Log("NTP time sync");
   time_t nowSecs = time(nullptr);
@@ -90,7 +91,8 @@ tm_isdst	int	Daylight Saving Time flag
 */
 
 // global vars
-int CurrentYear = 0, CurrentMonth, CurrentWeekday, CurrentDay, CurrentHour, CurrentMinute, CurrentSecond;  
+int CurrentYear = 0, CurrentMonth, CurrentWeekday, CurrentDay, CurrentHour, CurrentMinute, CurrentSecond;
+String Date_str, Time_str;
 
 // fill global variables
 bool GetCurrentTime(void) {
@@ -106,3 +108,17 @@ bool GetCurrentTime(void) {
   if (CurrentWeekday == 0) CurrentWeekday = 7; // day of the week (1 = Mon, 2 = Tue,.. 7 = Sun)
   return result;  
 }
+
+
+String getLocalTimeStr(void) {
+  time_t now;
+  time(&now);
+  //See http://www.cplusplus.com/reference/ctime/strftime/
+  char hour_output[30], day_output[30];
+  strftime(day_output, 30, "%a  %d-%m-%y", localtime(&now)); // Formats date as: Sat 24-Jun-17
+  strftime(hour_output, 30, "%H%M%S", localtime(&now));    // Formats time as: 14:05:49
+  Date_str = day_output;
+  Time_str = hour_output;
+  return Time_str;
+}
+

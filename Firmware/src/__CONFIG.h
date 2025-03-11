@@ -20,10 +20,14 @@
 
 #define TIME_SERVER1  "si.pool.ntp.org"
 #define TIME_SERVER2  "pool.ntp.org"
-#define GMT_OFFSET  1
-#define DST_OFFSET  1
+#define TIME_SERVER3  "time.nist.gov"
+/* timezone: 
+find your string here: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
+*/
+#define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"  // Europe/Ljubljana
 
-#define DAY_TIME       7
+#define DAY_TIME       6
 #define EVENING_TIME  22
 #define NIGHT_TIME    23
 
@@ -34,7 +38,7 @@
 
 
 // ************ Hardware *********************
-
+// encoder
 #define RXD2pin  16
 #define TXD2pin  17
 
