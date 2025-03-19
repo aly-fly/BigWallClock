@@ -38,7 +38,7 @@ bool queryEncoder(uint8_t command, uint8_t DataLength, bool printData)
         {
             dbgStr.concat("%2X ", RxBuffer[i]);
         }
-        LogNS("Data: %s\r\n", dbgStr);
+        LogNS("Data: %s\r\n", dbgStr.c_str());
     }
 
     if (command == 'v')
@@ -52,7 +52,7 @@ bool queryEncoder(uint8_t command, uint8_t DataLength, bool printData)
                 dbgStr.concat(ch);
         }
         dbgStr.trim();
-        LogNS("Data: %s \r\n", dbgStr);
+        LogNS("Data: %s \r\n", dbgStr.c_str());
     }
     return (bytesRead == (DataLength + 1));
 }

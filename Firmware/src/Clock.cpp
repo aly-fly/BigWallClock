@@ -8,11 +8,11 @@
 #include "Logger.h"
 #include "GlobalVariables.h"
 
-
 unsigned long LastTimeClockSynced = 0; // data is not valid
 
-void setClock(void) {
-  //Log("setClock()");
+void setClock(void)
+{
+  // Log("setClock()");
 
   /*
   if (!inHomeLAN) {
@@ -48,10 +48,10 @@ void setClock(void) {
     }
     */
 
-  if ((millis() < (LastTimeClockSynced + 60*60*1000)) && (LastTimeClockSynced != 0)) {  // check every hour
-    return;  // clock is already synced
+  if ((millis() < (LastTimeClockSynced + 60 * 60 * 1000)) && (LastTimeClockSynced != 0))
+  {         // check every hour
+    return; // clock is already synced
   }
-
 
   //  configTime(GMT_OFFSET*60*60, DST_OFFSET*60*60, TIME_SERVER1, TIME_SERVER2);
   configTime(0, 0, TIME_SERVER1, TIME_SERVER2, TIME_SERVER3);
@@ -59,7 +59,8 @@ void setClock(void) {
 
   Log("NTP time sync");
   time_t nowSecs = time(nullptr);
-  while (nowSecs < 8 * 3600 * 2) {
+  while (nowSecs < 8 * 3600 * 2)
+  {
     delay(500);
     LogNS(".");
     yield();
@@ -68,11 +69,22 @@ void setClock(void) {
 
   LogNS("\r\n");
   struct tm timeinfo;
-  //gmtime_r(&nowSecs, &timeinfo);
+  // gmtime_r(&nowSecs, &timeinfo);
   getLocalTime(&timeinfo);
   BootTime = asctime(&timeinfo);
+  int i = 0;
+  while (BootTime[i] != '\0')
+  {
+    if (BootTime[i] == '\n')
+    {
+      BootTime[i] = '\0'; // replace newline with end terminator
+      break;
+    }
+    i++;
+  }
+
   Log("Current time: %s.", BootTime);
-  
+
   LastTimeClockSynced = millis();
   GetCurrentTime(); // fill global variables
 }
@@ -84,10 +96,10 @@ tm_min	int	minutes after the hour	0-59
 tm_hour	int	hours since midnight	0-23
 tm_mday	int	day of the month	1-31
 tm_mon	int	months since January	0-11
-tm_year	int	years since 1900	
+tm_year	int	years since 1900
 tm_wday	int	days since Sunday	0-6
 tm_yday	int	days since January 1	0-365
-tm_isdst	int	Daylight Saving Time flag	
+tm_isdst	int	Daylight Saving Time flag
 */
 
 // global vars
@@ -95,30 +107,31 @@ int CurrentYear = 0, CurrentMonth, CurrentWeekday, CurrentDay, CurrentHour, Curr
 String Date_str, Time_str;
 
 // fill global variables
-bool GetCurrentTime(void) {
+bool GetCurrentTime(void)
+{
   struct tm timeinfo;
   bool result = getLocalTime(&timeinfo);
-  CurrentYear  = timeinfo.tm_year + 1900;
+  CurrentYear = timeinfo.tm_year + 1900;
   CurrentMonth = timeinfo.tm_mon + 1;
-  CurrentDay   = timeinfo.tm_mday;
-  CurrentHour  = timeinfo.tm_hour;
+  CurrentDay = timeinfo.tm_mday;
+  CurrentHour = timeinfo.tm_hour;
   CurrentMinute = timeinfo.tm_min;
   CurrentSecond = timeinfo.tm_sec;
-  CurrentWeekday  = timeinfo.tm_wday; // days since Sunday	0-6
-  if (CurrentWeekday == 0) CurrentWeekday = 7; // day of the week (1 = Mon, 2 = Tue,.. 7 = Sun)
-  return result;  
+  CurrentWeekday = timeinfo.tm_wday; // days since Sunday	0-6
+  if (CurrentWeekday == 0)
+    CurrentWeekday = 7; // day of the week (1 = Mon, 2 = Tue,.. 7 = Sun)
+  return result;
 }
 
-
-String getLocalTimeStr(void) {
+String getLocalTimeStr(void)
+{
   time_t now;
   time(&now);
-  //See http://www.cplusplus.com/reference/ctime/strftime/
+  // See http://www.cplusplus.com/reference/ctime/strftime/
   char hour_output[30], day_output[30];
   strftime(day_output, 30, "%a  %d-%m-%y", localtime(&now)); // Formats date as: Sat 24-Jun-17
-  strftime(hour_output, 30, "%H%M%S", localtime(&now));    // Formats time as: 14:05:49
+  strftime(hour_output, 30, "%H%M%S", localtime(&now));      // Formats time as: 14:05:49
   Date_str = day_output;
   Time_str = hour_output;
   return Time_str;
 }
-

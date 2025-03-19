@@ -177,7 +177,13 @@ void LED_allSameColor(uint32_t RGB, bool UpdateNow)
     }
 }
 
-void LED_showProgress(int percent, uint32_t dotColor, uint32_t trailColor)
+void LED_showProgressNumber(int clockNumber, uint32_t dotColor, uint32_t trailColor)
+{
+    float percent = (float)clockNumber * 100 / 12;
+    LED_showProgressPercent(round(percent), dotColor, trailColor);
+}
+
+void LED_showProgressPercent(int percent, uint32_t dotColor, uint32_t trailColor)
 {
  // int idx = (int)round(((float)percent * NR_OF_LEDS) / 100);
     int idx = ((percent * ((NR_OF_LEDS * 2) + 1)) / 200); // + 0.5 to show both 0% and 100%

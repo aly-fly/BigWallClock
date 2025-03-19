@@ -23,12 +23,13 @@ void WiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info){
       break;     
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       myIP = WiFi.localIP();
-      Log("Got IP: %s", myIP.toString());
+      Log("Got IP: %s", myIP.toString().c_str());
       //WifiState = connected;
       break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       //WifiState = disconnected;
-      Log("WiFi lost connection. Reason: %d", info.wifi_sta_disconnected.reason);
+      Log("WiFi lost connection. Reason: %d - %s", info.wifi_sta_disconnected.reason, 
+                                                   WiFi.disconnectReasonName((wifi_err_reason_t)info.wifi_sta_disconnected.reason));
       break;
     default:
       break;
@@ -62,6 +63,9 @@ bool WifiInit(void)  {
   Serial.println(WiFi.macAddress());
 */
 
+  WiFi.disconnect(true, true); // disconnect with radio off and remove autoconnect data
+  delay(100); // wait for disconnect
+  
   WiFi.mode(WIFI_STA);
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);  
   WiFi.setHostname(DEVICE_NAME);  
@@ -96,7 +100,7 @@ bool WifiInit(void)  {
 #endif
   
   Serial.println();
-  Log("WiFi connected. SSID: %s, IP: %s", WiFi.SSID(), WiFi.localIP().toString());
+  Log("WiFi connected. SSID: %s, IP: %s, Channel: %d, RSSI: %d, BSSID: %s", WiFi.SSID(), WiFi.localIP().toString(), WiFi.channel(), WiFi.RSSI(), WiFi.BSSIDstr().c_str());
   delay(200);
   return true;
 }

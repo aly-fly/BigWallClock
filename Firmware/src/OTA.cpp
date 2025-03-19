@@ -44,7 +44,7 @@ void OTA_init(void)
     {
       int percent = (progress * 100) / total;
       LogNS("Progress: %u%%\r\n", percent);
-      LED_showProgress(percent, clGREENbright, clGREENdim);
+      LED_showProgressPercent(percent, clGREENbright, clGREENdim);
       LEDbuiltin_Toggle();
       divisor = 0;
     } });

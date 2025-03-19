@@ -53,35 +53,35 @@ void setup()
   }
 
   uint32_t tailColor = clBLUEdim;
-  LED_showProgress(10, clORANGEbright, tailColor);
+  LED_showProgressNumber(1, clORANGEbright, tailColor);
   if (fileSystem_init())
-    LED_showProgress(15, clBLUEbright, tailColor);
+  LED_showProgressNumber(1, clBLUEbright, tailColor);
   else
   {
     tailColor = clREDdim;
-    LED_showProgress(15, clREDbright, tailColor);
+    LED_showProgressNumber(1, clREDbright, tailColor);
   }
   delay(200);
 
-  LED_showProgress(20, clORANGEbright, tailColor);
+  LED_showProgressNumber(2, clORANGEbright, tailColor);
   if (WifiInit())
-    LED_showProgress(25, clBLUEbright, tailColor);
+    LED_showProgressNumber(2, clBLUEbright, tailColor);
   else
   {
     tailColor = clREDdim;
-    LED_showProgress(25, clREDbright, tailColor);
+    LED_showProgressNumber(2, clREDbright, tailColor);
   }
   delay(200);
   startTcpSocket();
   OTA_init();
 
-  LED_showProgress(30, clORANGEbright, tailColor);
+  LED_showProgressNumber(4, clORANGEbright, tailColor);
   if (encoderInit())
-    LED_showProgress(35, clBLUEbright, tailColor);
+    LED_showProgressNumber(4, clBLUEbright, tailColor);
   else
   {
     tailColor = clREDdim;
-    LED_showProgress(35, clREDbright, tailColor);
+    LED_showProgressNumber(4, clREDbright, tailColor);
     Log("ENCODER INIT FAILED. HALTED.");
     while (1) // stop here
     {
@@ -90,13 +90,13 @@ void setup()
   }
   delay(200);
 
-  LED_showProgress(40, clORANGEbright, tailColor);
+  LED_showProgressNumber(6, clORANGEbright, tailColor);
   if (MotorInit())
-    LED_showProgress(45, clBLUEbright, tailColor);
+    LED_showProgressNumber(6, clBLUEbright, tailColor);
   else
   {
     tailColor = clREDdim;
-    LED_showProgress(45, clREDbright, tailColor);
+    LED_showProgressNumber(6, clREDbright, tailColor);
     Log("MOTOR INIT FAILED. HALTED.");
     while (1) // stop here
     {
@@ -105,13 +105,13 @@ void setup()
   }
   delay(200);
 
-  LED_showProgress(50, clORANGEbright, tailColor);
+  LED_showProgressNumber(8, clORANGEbright, tailColor);
   if (TempSensorInit())
-    LED_showProgress(55, clBLUEbright, tailColor);
+    LED_showProgressNumber(8, clBLUEbright, tailColor);
   else
   {
     tailColor = clREDdim;
-    LED_showProgress(55, clREDbright, tailColor);
+    LED_showProgressNumber(8, clREDbright, tailColor);
     Log("TEMP SENSOR INIT FAILED. HALTED.");
     while (1) // stop here
     {
@@ -120,14 +120,14 @@ void setup()
   }
   delay(200);
 
-  LED_showProgress(60, clORANGEbright, tailColor);
+  LED_showProgressNumber(10, clORANGEbright, tailColor);
   setClock();
-  LED_showProgress(65, clBLUEbright, tailColor);
-  delay(200);
+  LED_showProgressNumber(10, clBLUEbright, tailColor);
+  delay(300);
 
   EnableMotor(true);
-  LED_showProgress(70, clBLUEbright, tailColor);
-  delay(200);
+  LED_showProgressNumber(12, clBLUEbright, tailColor);
+  delay(300);
 
   /*
     String sPingIP;
