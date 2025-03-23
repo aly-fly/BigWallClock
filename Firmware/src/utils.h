@@ -14,11 +14,11 @@ void TrimDoubleChars (String& Str, char cc);
 void TrimDoubleSpaces (String& Str);
 
 bool IsUppercaseChar(char chr);
-int FindUppercaseChar(String &Str, const int StartAt);
+int FindUppercaseChar(const String &Str, const int StartAt);
 
-String FindJsonParam(String& inStr, String needParam, int& Position);
+String FindJsonParam(const String& inStr, String needParam, int& Position);
 
-String FindXMLParam(String& inStr, String needParam, int& Position);
+String FindXMLParam(const String& inStr, String needParam, int& Position);
 
 char        utf8ascii ( char ascii ) ;                             // Convert UTF to Ascii
 void        utf8ascii_ip ( char* s ) ;                             // Convert UTF to Ascii in place

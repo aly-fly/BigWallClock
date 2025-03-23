@@ -42,7 +42,7 @@ void OTA_init(void)
     divisor++;
     if (divisor >= 5)
     {
-      int percent = (progress * 100) / total;
+      unsigned int percent = (progress * 100) / total;
       LogNS("Progress: %u%%\r\n", percent);
       LED_showProgressPercent(percent, clGREENbright, clGREENdim);
       LEDbuiltin_Toggle();
@@ -53,7 +53,7 @@ void OTA_init(void)
                    {
     const char* msg = "OTA Done!" ;
     Log(msg) ;                     // Show message in debug
-    LED_allSameColor(clBLUEbright, true);
+    LED_allSameColor(clBLUEdim, true);
     delay (600); });
 
   ArduinoOTA.onError([](ota_error_t error)

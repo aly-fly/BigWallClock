@@ -11,25 +11,30 @@
 WiFiMulti wifiMulti;
 
 
+void WifiPrintStatus(void)
+{
+  Log("WiFi connected. SSID: %s, IP: %s, Channel: %d, RSSI: %d, BSSID: %s", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.channel(), WiFi.RSSI(), WiFi.BSSIDstr().c_str());
+}
+
+
 void WiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info){
   IPAddress myIP;
+  //const char * evtName = WiFi.eventName(event);
   switch(event){
     case ARDUINO_EVENT_WIFI_STA_START:
-      //WifiState = disconnected;
       Log("Station Mode Started");
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: // IP not yet assigned
-      Log("Connected to AP: %s", WiFi.SSID());
+      Log("Connected to AP: %s", WiFi.SSID().c_str());
       break;     
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       myIP = WiFi.localIP();
       Log("Got IP: %s", myIP.toString().c_str());
-      //WifiState = connected;
       break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      //WifiState = disconnected;
       Log("WiFi lost connection. Reason: %d - %s", info.wifi_sta_disconnected.reason, 
                                                    WiFi.disconnectReasonName((wifi_err_reason_t)info.wifi_sta_disconnected.reason));
+                                                   // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/wifi.html#wi-fi-reason-code
       break;
     default:
       break;
@@ -63,7 +68,7 @@ bool WifiInit(void)  {
   Serial.println(WiFi.macAddress());
 */
 
-  WiFi.disconnect(true, true); // disconnect with radio off and remove autoconnect data
+  WiFi.disconnect(true, true); // disconnect with radio off and remove autoconnect data from NVS
   delay(100); // wait for disconnect
   
   WiFi.mode(WIFI_STA);
@@ -81,7 +86,6 @@ bool WifiInit(void)  {
   if(wifiMulti.run() != WL_CONNECTED) {
     Log("WiFi connection timeout!");
     delay(2000);
-    //WifiState = disconnected;
     return false; // exit loop, exit procedure, continue startup
   }
 #else
@@ -100,10 +104,27 @@ bool WifiInit(void)  {
 #endif
   
   Serial.println();
-  Log("WiFi connected. SSID: %s, IP: %s, Channel: %d, RSSI: %d, BSSID: %s", WiFi.SSID(), WiFi.localIP().toString(), WiFi.channel(), WiFi.RSSI(), WiFi.BSSIDstr().c_str());
+  WifiPrintStatus();
   delay(200);
   return true;
 }
 
 
 
+bool WifiIsConnected(void)
+{
+  return (WiFi.status() == WL_CONNECTED);
+}
+
+
+int8_t WifiGetSignalLevel(void)
+{
+  if (WiFi.isConnected())
+  {
+    return WiFi.RSSI();
+  }
+  else
+  {
+    return -111;
+  }
+}

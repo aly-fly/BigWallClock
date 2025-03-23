@@ -10,3 +10,5 @@
 - hardcoded settings moved to nvram
 
 - MQTT integration with autodiscovery for hardcoded
+
+- motor temperature filter

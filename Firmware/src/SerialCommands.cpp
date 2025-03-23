@@ -12,6 +12,8 @@
 #include "fileSystem.h"
 #include "TcpSocket.h"
 #include "ResetReason.h"
+#include "myWiFi.h"
+#include "LEDs.h"
 
 String sSerialCmd;
 
@@ -142,13 +144,15 @@ void ReceiveAndProcessSerialCommands(void)
                 Log("-> System status?");
                 Log( get_reset_reason().c_str() );
                 Log("Boot time: %s.", BootTime);
-                MotorGetStatusOk(true);
+                MotorGetStatus(true);
                 Log("Motor temperature = %.1f C", TempSensorRead());
 
                 encoderRead(true);
                 encoderReadAirGap();
 
                 fileSystemPrintInfo();
+
+                WifiPrintStatus();
 
                 Log("Free memory: %u bytes", esp_get_free_heap_size());
                 multi_heap_info_t info;
@@ -182,6 +186,10 @@ void ReceiveAndProcessSerialCommands(void)
             {
                 Log("-> Reboot!");
                 EnableMotor(false);
+                LED_allSameColor(clORANGEbright, true);
+                delay(200);
+                loggerPurgeToFile(true);
+                delay(200);
                 ESP.restart();
             }
 

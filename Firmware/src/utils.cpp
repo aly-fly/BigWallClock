@@ -90,7 +90,7 @@ bool IsUppercaseChar(char chr) {
   return ((chr >= 65) && (chr <= 90));  
 }
 
-int FindUppercaseChar(String &Str, const int StartAt = 0) {
+int FindUppercaseChar(const String &Str, const int StartAt = 0) {
   char chr;
   for (unsigned int i = StartAt; i < Str.length(); i++)
   {
@@ -103,7 +103,7 @@ int FindUppercaseChar(String &Str, const int StartAt = 0) {
   return -1;  
 }
 
-String FindJsonParam(String& inStr, String needParam, int& Position)
+String FindJsonParam(const String& inStr, String needParam, int& Position)
 {
     int indexStart = inStr.indexOf(needParam, Position);
     Position = -1; // status "not found" until found
@@ -121,7 +121,7 @@ String FindJsonParam(String& inStr, String needParam, int& Position)
 }
 
 
-String FindXMLParam(String& inStr, String needParam, int& Position)
+String FindXMLParam(const String& inStr, String needParam, int& Position)
 {
     String searchString = "<"+needParam+">";
     int indexStart = inStr.indexOf(searchString, Position);

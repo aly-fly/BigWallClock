@@ -3,6 +3,7 @@
 #include "fsTools.h"
 #include "__CONFIG.h"
 #include "Logger.h"
+#include "fileSystem.h"
 
 void MainLoopBackgroundTasks(void);
 
@@ -16,9 +17,7 @@ bool fileSystem_init(void)
   if (LittleFS.begin(true)) // format on fail
   {
     Log("Filesystem ready.");
-    Log("FS size: %d Bytes", LittleFS.totalBytes());
-    Log("FS used: %d Bytes", LittleFS.usedBytes());
-    Log("FS available: %d Bytes", LittleFS.totalBytes() - LittleFS.usedBytes());
+    fileSystemPrintInfo();
     FSready = true;
     result = true;
   }
@@ -31,14 +30,14 @@ bool fileSystem_init(void)
 
 void fileSystemPrintInfo(void)
 {
-  Log("FS size: %d Bytes", LittleFS.totalBytes());
-  Log("FS used: %d Bytes", LittleFS.usedBytes());
-  Log("FS available: %d Bytes", LittleFS.totalBytes() - LittleFS.usedBytes());
+  Log("FS size: %u Bytes", LittleFS.totalBytes());
+  Log("FS used: %u Bytes", LittleFS.usedBytes());
+  Log("FS available: %u Bytes", LittleFS.totalBytes() - LittleFS.usedBytes());
 }
 
 //==================================================================================================================
 
-bool saveToFile(String *TextToWrite)
+bool saveToFile(const String *TextToWrite)
 {
   size_t fileSize = 0;
   size_t AvailableSpace = 0;

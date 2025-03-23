@@ -82,6 +82,7 @@ void setClock(void)
     }
     i++;
   }
+  //strftime(BootTime, sizeof(BootTime), q, &timeinfo);
 
   Log("Current time: %s.", BootTime);
 

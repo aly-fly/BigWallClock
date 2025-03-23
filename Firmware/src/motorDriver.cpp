@@ -137,7 +137,7 @@ end;
                         //  ALARM_EN_SW_TURN_ON 
                             ); 
 
-  MotorGetStatusOk(true);
+  MotorGetStatus(true);
   driver.getStatus(); // clears error flags
 
   driver.setAcc(150); // full steps/s^2 acceleration
@@ -167,9 +167,9 @@ end;
   return result;
 }
 
-bool MotorGetStatusOk(bool PrintAlways)
+motorStatus_t MotorGetStatus(bool PrintAlways)
 {
-  bool MotorOk;
+  motorStatus_t MotorStatus = MSOK;
   String ActiveErrors;
   int iStatus = driver.getStatus();
   // if returned value is 0, reading is probably incorrect. Read again.
@@ -191,7 +191,7 @@ bool MotorGetStatusOk(bool PrintAlways)
   if (!(iStatus & STATUS_nOCD))      ActiveErrors.concat("  OCD_overcurrent");  
   if ( (iStatus & 0x1000))           ActiveErrors.concat("  TH 12");  
   if ( (iStatus & 0x0800))           ActiveErrors.concat("  TH 11");  
-  if (!(iStatus & STATUS_nUVLO_ADC)) ActiveErrors.concat("  UVLO_ADC"); // The UVLO_ADC flag is active low and indicates an ADC undervoltage event. 
+  //if (!(iStatus & STATUS_nUVLO_ADC)) ActiveErrors.concat("  UVLO_ADC"); // The UVLO_ADC flag is active low and indicates an ADC undervoltage event. 
   if (!(iStatus & STATUS_nUVLO))     ActiveErrors.concat("  UVLO");     // The UVLO flag is active low and is set by an undervoltage lockout or reset events (power-up included).
   if ( (iStatus & STATUS_STCK_MOD))  ActiveErrors.concat("  STCK_MOD");  
   if ( (iStatus & STATUS_CMD_ERROR)) ActiveErrors.concat("  CMD_ERROR"); // active high and indicates that the command received by SPI cannot be performed or does not exist at all.  
@@ -203,15 +203,19 @@ bool MotorGetStatusOk(bool PrintAlways)
   if (!(iStatus & STATUS_nBUSY))     ActiveErrors.concat("  BUSY");  
   if ( (iStatus & STATUS_HIZ))       ActiveErrors.concat("  HiZ");  
 
-  // active high flags
-  MotorOk = (iStatus & 0b0001100010000000) == 0; //thermal, cmd_err
-  // active low flags
-  MotorOk = MotorOk & ((iStatus & 0b1110001000000000) == 0b1110001000000000); // stall, OCD, UVLO
-  if ((!MotorOk) || (PrintAlways))
+  if ( (!(iStatus & STATUS_nSTALL_A)) || (!(iStatus & STATUS_nSTALL_B)) )
+  {
+    MotorStatus = MSSTALL;
+  }
+  if ( (!(iStatus & STATUS_nOCD)) || (iStatus & 0x1800) || (!(iStatus & STATUS_nUVLO)) )
+  {
+    MotorStatus = MSFAULT;
+  }  
+  if ((MotorStatus != MSOK) || (PrintAlways))
   {
     Log("Motor status: %s",  ActiveErrors.c_str());
   }
-  return MotorOk;
+  return MotorStatus;
 }
 
 void MoveConstSpeed (float speed, bool IgnoreLimit)
@@ -256,14 +260,14 @@ void oneMotion(int dist) {
   driver.softStop(); // soft stops prevent errors in the next operation
   while(driver.busyCheck());
   
-  MotorGetStatusOk(true);
+  MotorGetStatus(true);
 
   driver.move(REV, dist/2); // reverse back
   while(driver.busyCheck());
   driver.softStop();
   while(driver.busyCheck());
 
-  MotorGetStatusOk(true);
+  MotorGetStatus(true);
 }
 
 
