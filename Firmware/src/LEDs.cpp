@@ -9,9 +9,9 @@
 
 //======================================================================================================================
 
-#define NR_OF_LEDS 128  // 0...127
+#define NR_OF_LEDS 128 // 0...127
 #define NR_OF_ALL_BITS 24 * NR_OF_LEDS
-#define LED_OFFSET  64
+#define LED_OFFSET 64
 
 byte Dimming = 255;
 
@@ -120,17 +120,18 @@ void LEDtransmitData(void)
     rmtWrite(MyRMT, LEDtxBuffer, NR_OF_ALL_BITS);
 }
 
-void LED_color(int LedNum, uint32_t RGB, bool UpdateNow)
+void LED_SetPixelColor(int LedNum, uint32_t RGB, bool UpdateNow)
 {
     int LedNumOffset = LedNum - LED_OFFSET;
-    if (LedNumOffset < 0) LedNumOffset += NR_OF_LEDS;
+    if (LedNumOffset < 0)
+        LedNumOffset += NR_OF_LEDS;
 
     if ((LedNumOffset < 0) || (LedNumOffset >= NR_OF_LEDS) || (Dimming == 0))
         return;
 
-    LEDdata[LedNumOffset].Red   = (((RGB >> 16) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNumOffset].Green = (((RGB >>  8) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNumOffset].Blue  = (((RGB)       & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNumOffset].Red = (((RGB >> 16) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNumOffset].Green = (((RGB >> 8) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNumOffset].Blue = (((RGB) & 0xFF) * Dimming) >> 8;
 
     if (UpdateNow)
     {
@@ -138,22 +139,20 @@ void LED_color(int LedNum, uint32_t RGB, bool UpdateNow)
     }
 }
 
-void LED_Dimming(byte dim)
+void LED_SetDimming(byte dim)
 {
-    Dimming = dim;
+    Dimming = gammaCorrection(dim);
+    if (Dimming == 0)
+        LED_clear(true);
+}
+
+byte LED_GetDimming(void)
+{
+    return Dimming;
 }
 
 void LED_clear(bool UpdateNow)
 {
-    /*
-    for (int LedNum = 0; LedNum < NR_OF_LEDS; LedNum++)
-    {
-        //LED_color(LedNum, 0, false);
-        LEDdata[LedNum].Red = 0;
-        LEDdata[LedNum].Green = 0;
-        LEDdata[LedNum].Blue = 0;
-    }
-    */
     memset(LEDdata, 0, sizeof(LEDdata));
     if (UpdateNow)
     {
@@ -162,19 +161,39 @@ void LED_clear(bool UpdateNow)
     }
 }
 
-// No dimming!
 void LED_allSameColor(uint32_t RGB, bool UpdateNow)
 {
+  uint32_t R = (RGB & 0xFF0000) >> 16;
+  uint32_t G = (RGB & 0x00FF00) >> 8;
+  uint32_t B = (RGB & 0x0000FF);
+  R = (R * Dimming) >> 8;
+  G = (G * Dimming) >> 8;
+  B = (B * Dimming) >> 8;
+
     for (int LedNum = 0; LedNum < NR_OF_LEDS; LedNum++)
     {
-        LEDdata[LedNum].Red =   (RGB >> 16) & 0xFF;
-        LEDdata[LedNum].Green = (RGB >>  8) & 0xFF;
-        LEDdata[LedNum].Blue =  (RGB      ) & 0xFF;
+        LEDdata[LedNum].Red = R;
+        LEDdata[LedNum].Green = G;
+        LEDdata[LedNum].Blue = B;
     }
     if (UpdateNow)
     {
         LEDtransmitData();
     }
+}
+
+// Change single pixel color. Position 0.00 to 0.99
+void LED_showSingleDot(float pixel01, uint32_t dotColor, bool UpdateNow)
+{
+    int idx = (int)round(pixel01 * NR_OF_LEDS);
+    if (idx < 0)
+        idx = 0;
+    if (idx >= NR_OF_LEDS)
+        idx = NR_OF_LEDS - 1;
+
+    LED_SetPixelColor(idx, dotColor, false);
+    if (UpdateNow)
+        LEDtransmitData();
 }
 
 void LED_showProgressNumber(int clockNumber, uint32_t dotColor, uint32_t trailColor)
@@ -185,7 +204,7 @@ void LED_showProgressNumber(int clockNumber, uint32_t dotColor, uint32_t trailCo
 
 void LED_showProgressPercent(int percent, uint32_t dotColor, uint32_t trailColor)
 {
- // int idx = (int)round(((float)percent * NR_OF_LEDS) / 100);
+    // int idx = (int)round(((float)percent * NR_OF_LEDS) / 100);
     int idx = ((percent * ((NR_OF_LEDS * 2) + 1)) / 200); // + 0.5 to show both 0% and 100%
     uint32_t color;
     for (int i = 0; i < NR_OF_LEDS; i++)
@@ -194,11 +213,14 @@ void LED_showProgressPercent(int percent, uint32_t dotColor, uint32_t trailColor
             color = trailColor;
         else if (i == idx)
             color = dotColor;
-        else color = 0; // 0x000505; // dim blue/green
-        LED_color(i, color, false);
+        else
+            color = 0; // 0x000505; // dim blue/green
+        LED_SetPixelColor(i, color, false);
     }
     LEDtransmitData();
 }
+
+//=====================================================================================================
 
 void LED_test(void)
 {
@@ -221,7 +243,7 @@ void LED_test(void)
             color = clBLUEdim;
             break;
         }
-        LED_color(i, color, true);
+        LED_SetPixelColor(i, color, true);
         delay(500);
     }
 
@@ -239,7 +261,7 @@ void LED_test(void)
         g = random(0, 123);
         b = random(0, 123);
         color = (r << 16) | (g << 8) | b;
-        LED_color(i, color, true);
+        LED_SetPixelColor(i, color, true);
         delay(500);
     }
 }
@@ -253,7 +275,7 @@ RGB sequencer
     // clear pixels
     for (LedNum = 1; LedNum < 5; LedNum++)
     {
-      LED_color(LedNum, 0, false);
+      LED_SetPixelColor(LedNum, 0, false);
     }
     LedNum = (LEDsequence % 4) + 1;
     LedColorIdx = (LEDsequence / 4);
@@ -271,12 +293,138 @@ RGB sequencer
       LedColor = LED_BLUdim;
       break;
     }
-    LED_color(LedNum, LedColor, true);
+    LED_SetPixelColor(LedNum, LedColor, true);
     LEDsequence++;
     if (LEDsequence >= 12)
       LEDsequence = 0;
 
-    // LED_color(2, ((59 * 2) - (CurrentSecond * 2) << 16) | (CurrentSecond * 2), true);
+    // LED_SetPixelColor(2, ((59 * 2) - (CurrentSecond * 2) << 16) | (CurrentSecond * 2), true);
     LEDlastUpdate = CurrentSecond;
   }
 */
+
+
+//=======================================================================================================
+
+
+void adjustColorBrightness(uint32_t *RGB, const uint8_t brightness)
+{
+  uint8_t br = gammaCorrection(brightness);
+  uint32_t R = (*RGB & 0xFF0000) >> 16;
+  uint32_t G = (*RGB & 0x00FF00) >> 8;
+  uint32_t B = (*RGB & 0x0000FF);
+  R = (R * br) >> 8;
+  G = (G * br) >> 8;
+  B = (B * br) >> 8;
+  *RGB = (R << 16) | (G << 8) | B;
+}
+
+uint8_t gammaCorrection(uint8_t brightness)
+{
+  /* gamma = 2:
+    0 ->   0
+   64 ->  16
+  128 ->  64
+  192 -> 144
+  255 -> 255
+  */
+  float input = brightness;
+  float calc = input * input;
+  calc = calc * 0.0039215686274509803921568627451;
+  return (uint8_t)round(calc);
+}
+
+//==========================================================================================================
+
+// rainbow functions
+
+
+const uint16_t max_phase = 768;  // 256 up, 256 down, 256 off
+
+uint8_t phaseToIntensity(uint16_t phase)
+{
+  uint16_t color = 0;
+  if (phase <= 255)
+  {
+    // Ramping up
+    color = phase;
+  }
+  else if (phase <= 511)
+  {
+    // Ramping down
+    color = 511 - phase;
+  }
+  else
+  {
+    // Off
+    color = 0;
+  }
+  if (color > 255)
+  {
+    // TODO: Trigger ERROR STATE, bug in code.
+  }
+  return uint8_t(color % 256);
+}
+
+uint32_t phaseToColor(uint16_t phase)
+{
+  uint8_t red = phaseToIntensity(phase);
+  uint8_t green = phaseToIntensity((phase + 256) % max_phase);
+  uint8_t blue = phaseToIntensity((phase + 512) % max_phase);
+  return (uint32_t(red) << 16 | uint32_t(green) << 8 | uint32_t(blue));
+}
+
+uint32_t hueToPhase(float hue)
+{
+  hue = hue - 120.f;
+  if (hue < 0)
+  {
+    hue = hue + 360.f;
+  }
+  uint32_t phase = uint32_t(round(768.f * (1.f - hue / 360.f)));
+  phase = phase % max_phase;
+  return (phase);
+}
+
+float phaseToHue(uint32_t phase)
+{
+  float hue = 120.f + ((768.f - float(phase)) / 768.f) * 360.f;
+  // h = 120 + (1 - p/768)*360
+  if (hue >= 360.f)
+  {
+    hue = hue - 360.f;
+  }
+  return (round(hue));
+}
+
+void adjustBrightness(uint32_t *RGB, const uint8_t brightness)
+{
+  uint32_t R = (*RGB & 0xFF0000) >> 16;
+  uint32_t G = (*RGB & 0x00FF00) >> 8;
+  uint32_t B = (*RGB & 0x0000FF);
+  R = (R * brightness) >> 8;
+  G = (G * brightness) >> 8;
+  B = (B * brightness) >> 8;
+  *RGB = (R << 16) | (G << 8) | B;
+}
+
+// width = 1 -> full rainbow at once; 3 -> one third displayed at once
+void rainbowPattern(uint16_t width, float duration_sec, uint8_t brightness)
+{
+  const float phase_per_pixel = (max_phase / NR_OF_LEDS) / width;
+
+  // Rainbow roatation speed now configurable
+  float duration = duration_sec * 1000;
+  float phase = (float(millis() % (int)duration) / duration * max_phase);
+
+  for (uint8_t pixel = 0; pixel < NR_OF_LEDS; pixel++)
+  {
+    // Shift the phase for this LED.
+    uint16_t my_phase = ((uint32_t)round(phase + pixel * phase_per_pixel) % max_phase);
+    uint32_t RGBcolor = phaseToColor(my_phase);
+    adjustBrightness(&RGBcolor, brightness);
+    LED_SetPixelColor(pixel, RGBcolor, false);
+  }
+}
+
+

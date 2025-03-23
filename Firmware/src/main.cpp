@@ -21,6 +21,10 @@
 #include "SerialCommands.h"
 #include "ResetReason.h"
 
+#ifdef MQTT_ENABLED
+#include "Mqtt_client_HA.h"
+#endif
+
 void MainLoopBackgroundTasks(void);
 
 void setup()
@@ -38,6 +42,7 @@ void setup()
     delay(100);
   }
   Serial.println();
+  Log("########################################");
   Log("Project: github.com/aly-fly/BigWallClock");
   Log("Version: %s", VERSION);
   Log("Build: %s", BUILD_TIMESTAMP);
@@ -55,7 +60,7 @@ void setup()
   uint32_t tailColor = clBLUEdim;
   LED_showProgressNumber(1, clORANGEbright, tailColor);
   if (fileSystem_init())
-  LED_showProgressNumber(1, clBLUEbright, tailColor);
+    LED_showProgressNumber(1, clBLUEbright, tailColor);
   else
   {
     tailColor = clREDdim;
@@ -120,10 +125,26 @@ void setup()
   }
   delay(200);
 
-  LED_showProgressNumber(10, clORANGEbright, tailColor);
+  LED_showProgressNumber(9, clORANGEbright, tailColor);
   setClock();
-  LED_showProgressNumber(10, clBLUEbright, tailColor);
+  LED_showProgressNumber(9, clBLUEbright, tailColor);
   delay(300);
+
+#ifdef MQTT_ENABLED
+  LED_showProgressNumber(10, clORANGEbright, tailColor);
+  Log("MQTT start...");
+  if (MqttStart())
+  {
+    LED_showProgressNumber(10, clBLUEbright, tailColor);
+    Log("MQTT start Done.");
+  }
+  else
+  {
+    tailColor = clREDdim;
+    LED_showProgressNumber(10, clREDbright, tailColor);
+    Log("MQTT start Error!");
+  }
+#endif
 
   EnableMotor(true);
   LED_showProgressNumber(12, clBLUEbright, tailColor);
@@ -150,7 +171,7 @@ void setup()
 
   LEDbuiltin_OFF();
   LED_clear(false);
-  LED_color(0, clGREENbright, true);
+  LED_SetPixelColor(0, clGREENbright, true);
 }
 
 // ===============================================================================================================================================================
@@ -162,16 +183,22 @@ float speedAdj, speedAdjFiltered, speedMotor;
 bool filterValid = false;
 bool ErrorCounterLogged = false;
 
-int LEDlastUpdateSec = 0; // limit refresh rate
-unsigned long LEDlastUpdateMS = 0;
 int LastHour = -1;
 float MotorTemperature = 0;
 float MotorTempLastLogged = -100;
 
 int heartBeatLed = 0;
 
-void loop()
+unsigned long LastTimeClockTaskRun = 0;
+
+int LastTimeLEDTaskRun = 0; // limit refresh rate
+
+void MainLoopClockTasks(void)
 {
+  if ((millis() - LastTimeClockTaskRun) < 100)
+    return; // run 10x per second
+  LastTimeClockTaskRun = millis();
+
   ClockWarning = false;
   ClockError = false;
 
@@ -264,12 +291,30 @@ void loop()
     ClockError = true;
   }
 
-  if (!MotorGetStatusOk())
+  motorStatus_t motSta = MotorGetStatus();
+  if (motSta == MSFAULT)
   {
+    Log("Motor failure!");
+    ErrorCounter = 4000;
+    ClockError = true;
+    // disable immediatelly
+    EnableMotor(false);
+    ClockEnabled = false;
     ErrorCounter += 50;
+  }
+  if (motSta == MSSTALL)
+  {
+    Log("Stall detected. Moving backwards a bit.");
+    ErrorCounter += 50;
+    MoveConstSpeed(-SPEED_LIMIT); // max speed reverse
+    delay(500);
+    MoveConstSpeed(+SPEED_LIMIT); // max speed forward
+    delay(600);
+    filterValid = false;
   }
 
   MotorTemperature = TempSensorRead();
+  MqttStatusTemperture = round(MotorTemperature);
   if (abs(MotorTempLastLogged - MotorTemperature) > 4)
   {
     Log("Motor temperature = %.1f C", MotorTemperature);
@@ -337,88 +382,8 @@ void loop()
   if (ErrorCounter > 1000)
     ClockError = true;
 
-  //========================================================================================================
-
-  if (CurrentHour != LastHour)
-  {
-    if ((CurrentHour >= NIGHT_TIME) || (CurrentHour < DAY_TIME))
-    {
-      LED_clear(true);
-      LED_Dimming(0);
-    }
-    else
-    {
-      if (CurrentHour >= EVENING_TIME)
-      {
-        LED_Dimming(EVENING_TIME_DIMMING);
-      }
-      else
-      {
-        LED_Dimming(DAY_TIME_BRIGHTNESS);
-      }
-    }
-    LastHour = CurrentHour;
-  }
-
-  if (LEDlastUpdateSec != CurrentSecond) // limit to 1x per second
-  {
-    byte LedNum;
-    if (CurrentSecond == 0)
-    {
-      LED_clear(false);
-    }
-    LedNum = CurrentSecond * 2;
-    if (LedNum >= 2)
-    {
-      LED_color(LedNum - 2, 0, false); // clear previous one
-    }
-    LED_color(LedNum, SECONDS1_DOT_COLOR, false);
-
-    LEDlastUpdateSec = CurrentSecond;
-    LEDlastUpdateMS = millis();
-  }
-  // half-second dot
-  if ((millis() - LEDlastUpdateMS) > 450)
-  {
-    byte LedNum = CurrentSecond * 2 + 1;
-    if (LedNum >= 3)
-    {
-      LED_color(LedNum - 2, 0, false); // clear previous one
-    }
-    LED_color(LedNum, SECONDS2_DOT_COLOR, false);
-
-    LEDlastUpdateMS = millis();
-  }
-
-  if (ClockError)
-    LED_color(LEDStatusLocation, clREDbright, true);
-  else if (ClockWarning)
-    LED_color(LEDStatusLocation, clORANGEbright, true);
-  else if (ClockEnabled)
-    LED_color(LEDStatusLocation, clGREENdim, true);
-  else
-    LED_color(LEDStatusLocation, clPINKbright, true);
-
-  //========================================================================================================
-
-  MainLoopBackgroundTasks();
-
-} // loop
-
-//========================================================================================================
-
-void MainLoopBackgroundTasks(void)
-{
-
-  ReceiveAndProcessSerialCommands();
-
-  loggerPurgeToFile();
-
-  LoopSocketServer();
-
-  OTA_loop();
-
-  delay(100);
+  if (!WifiIsConnected())
+    ClockWarning = true;
 
   heartBeatLed++;
   if (heartBeatLed >= 10)
@@ -427,3 +392,191 @@ void MainLoopBackgroundTasks(void)
     heartBeatLed = 0;
   }
 }
+
+//========================================================================================================
+
+#ifdef MQTT_ENABLED
+unsigned long lastMqttCommandExecuted = -1;
+bool MqttCommandReceived = false;
+#endif
+
+void MainLoopMQTTTasks(void)
+{
+#ifdef MQTT_ENABLED
+  MqttLoopFrequently();
+
+  MqttCommandReceived = false;
+
+  if (MqttCommandPowerReceived)
+  {
+    MqttCommandPowerReceived = false;
+    LogNS("CMD: Power = %d\r\n", MqttCommandPower);
+    MqttCommandReceived = true;
+  }
+  if (MqttCommandBrightnessReceived)
+  {
+    MqttCommandBrightnessReceived = false;
+    LogNS("CMD: Brightness = %d\r\n", MqttCommandBrightness);
+    // LED_SetDimming(MqttCommandBrightness); // system indicators have own brightness
+    MqttCommandReceived = true;
+  }
+  if (MqttCommandColorReceived)
+  {
+    MqttCommandColorReceived = false;
+    LogNS("CMD: RGB = 0x%6X\r\n", MqttCommandColor);
+    MqttCommandReceived = true;
+  }
+  if (MqttCommandEffectReceived)
+  {
+    MqttCommandEffectReceived = false;
+    LogNS("CMD: Effect = %d (%s)\r\n", MqttCommandEffectNumber, MqttCommandEffect);
+    MqttCommandReceived = true;
+  }
+  if (MqttCommandRainbowSecReceived)
+  {
+    MqttCommandRainbowSecReceived = false;
+    LogNS("CMD: Rainbow sec = %.1f\r\n", MqttCommandRainbowSec);
+    MqttCommandReceived = true;
+  }
+  if (MqttCommandDotsReceived)
+  {
+    MqttCommandDotsReceived = false;
+    LogNS("CMD: Dots = %d\r\n", MqttCommandDots);
+    MqttCommandReceived = true;
+  }
+
+  if (MqttCommandReceived)
+  {
+    lastMqttCommandExecuted = millis();
+  }
+
+  /*
+    if ((millis() - lastMqttCommandExecuted) > (MQTT_SAVE_PREFERENCES_AFTER_SEC * 1000)) && (lastMqttCommandExecuted != -1))
+    {
+      lastMqttCommandExecuted = -1;
+
+      Serial.print("Saving config...");
+      // stored_config.save();
+      Serial.println(" Done.");
+    }
+*/
+
+  // copy - confirm received values
+  MqttStatusBrightness = MqttCommandBrightness; // LED_GetDimming();
+  MqttStatusPower = MqttCommandPower;           // LED_GetDimming() > 0;
+  strncpy(MqttStatusEffect, Effect[MqttCommandEffectNumber].c_str(), sizeof(MqttStatusEffect) - 1);
+  MqttStatusEffect[sizeof(MqttStatusEffect) - 1] = '\0';
+  MqttStatusRainbowSec = MqttCommandRainbowSec;
+  MqttStatusDots = MqttCommandDots;
+  MqttStatusRssi = WifiGetSignalLevel();
+  MqttStatusErrorWarning = ErrorCounter;
+
+  MqttLoopInFreeTime();
+#endif
+}
+
+//========================================================================================================
+
+void MainLoopLEDTasks(void)
+{
+  uint32_t LEDcolor;
+
+  if ((millis() - LastTimeLEDTaskRun) < 100)
+    return; // run 10x per second
+  LastTimeLEDTaskRun = millis();
+
+  if (CurrentHour != LastHour)
+  {
+    if ((CurrentHour >= NIGHT_TIME) || (CurrentHour < DAY_TIME))
+    {
+      LED_clear(true);
+      LED_SetDimming(0);
+      MqttCommandPower = false;
+    }
+    else
+    {
+      MqttCommandPower = true;
+      if (CurrentHour >= EVENING_TIME)
+      {
+        LED_SetDimming(EVENING_TIME_DIMMING);
+      }
+      else
+      {
+        LED_SetDimming(DAY_TIME_BRIGHTNESS);
+      }
+    }
+    LastHour = CurrentHour;
+  }
+
+  if (!MqttCommandPower)
+  {
+    LED_clear(false); // OFF
+  }
+  else
+  {
+    // background effect
+    switch (MqttCommandEffectNumber)
+    {
+    case 0: // Static color
+      LEDcolor = MqttCommandColor;
+      adjustColorBrightness(&LEDcolor, MqttCommandBrightness); // background has individually adjustable brightness; not linked to clock's brightness
+      LED_allSameColor(LEDcolor, false);                       // set background
+      break;
+
+    case 1: // Uniform rainbow
+      rainbowPattern(8, MqttCommandRainbowSec, MqttCommandBrightness);
+      break;
+
+    case 2: // Travelling full rainbow
+      rainbowPattern(1, MqttCommandRainbowSec, MqttCommandBrightness);
+      break;
+
+    case 3: // Travelling partial rainbow
+      rainbowPattern(3, MqttCommandRainbowSec, MqttCommandBrightness);
+      break;
+
+    default:
+      LED_clear(false); // dark
+      break;
+    }
+  } // power = on
+
+  if (MqttCommandDots || ClockError || ClockWarning)
+  {
+    if (ClockError)
+      LEDcolor = clREDbright;
+    else if (ClockWarning)
+      LEDcolor = clORANGEbright;
+    else if (ClockEnabled)
+      LEDcolor = clGREENdim;
+    else
+      LEDcolor = clPINKbright;
+
+    LED_showSingleDot(0.00, LEDcolor, false);
+    LED_showSingleDot(0.25, LEDcolor, false);
+    LED_showSingleDot(0.50, LEDcolor, false);
+    LED_showSingleDot(0.75, LEDcolor, false);
+  }
+
+  LED_showSingleDot((float)CurrentSecond / 60, SECONDS_DOT_COLOR, true); // push everything to the LED strip
+}
+
+//========================================================================================================
+
+void MainLoopBackgroundTasks(void) // called also from startup blocking errors
+{
+  ReceiveAndProcessSerialCommands();
+  loggerPurgeToFile();
+  LoopSocketServer();
+  OTA_loop();
+}
+
+//========================================================================================================
+
+void loop()
+{
+  MainLoopClockTasks();
+  MainLoopMQTTTasks();
+  MainLoopLEDTasks();
+  MainLoopBackgroundTasks();
+} // loop
