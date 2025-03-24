@@ -10,7 +10,7 @@
 //======================================================================================================================
 
 #define NR_OF_LEDS 128 // 0...127
-#define NR_OF_ALL_BITS 24 * NR_OF_LEDS
+#define NR_OF_ALL_BITS (24 * NR_OF_LEDS + 1)
 #define LED_OFFSET 64
 
 byte GlobalBrightness = 255;
@@ -25,7 +25,7 @@ struct LEDdata_t
 LEDdata_t LEDdata[NR_OF_LEDS];
 
 rmt_data_t LEDtxBuffer[NR_OF_ALL_BITS];
-rmt_data_t LEDtxReset[1];
+//rmt_data_t LEDtxReset[1];
 rmt_obj_t *MyRMT = NULL;
 
 void LED_init(void)
@@ -39,12 +39,13 @@ void LED_init(void)
     float tickTime = rmtSetTick(MyRMT, 100); // 1 tick = 0.1 us (divisor = 8)
     Log("RMT Tick time = %.1f", tickTime);
 
+    /*
     // reset code = LOW for minimum 50 or 280 us
     LEDtxReset[0].level0 = 0;
     LEDtxReset[0].duration0 = 1500;
     LEDtxReset[0].level1 = 0;
     LEDtxReset[0].duration1 = 1500;
-
+    */
     memset(LEDdata, 0, sizeof(LEDdata));
 }
 
@@ -116,6 +117,12 @@ void LEDtransmitData(void)
         }
     }
 
+    // finish with constant HIGH (does not help...)
+    LEDtxBuffer[streamBitIdx].level0 = 1;
+    LEDtxBuffer[streamBitIdx].duration0 = 100;
+    LEDtxBuffer[streamBitIdx].level1 = 1;
+    LEDtxBuffer[streamBitIdx].duration1 = 100;
+
     // Send the data
     rmtWrite(MyRMT, LEDtxBuffer, NR_OF_ALL_BITS);
 }
@@ -157,7 +164,7 @@ void LED_clear(bool UpdateNow)
     memset(LEDdata, 0, sizeof(LEDdata));
     if (UpdateNow)
     {
-        rmtWrite(MyRMT, LEDtxReset, 1);
+        //rmtWrite(MyRMT, LEDtxReset, 1);
         LEDtransmitData();
     }
 }
