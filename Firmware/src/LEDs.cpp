@@ -13,7 +13,7 @@
 #define NR_OF_ALL_BITS 24 * NR_OF_LEDS
 #define LED_OFFSET 64
 
-byte Dimming = 255;
+byte GlobalBrightness = 255;
 
 struct LEDdata_t
 {
@@ -39,11 +39,11 @@ void LED_init(void)
     float tickTime = rmtSetTick(MyRMT, 100); // 1 tick = 0.1 us (divisor = 8)
     Log("RMT Tick time = %.1f", tickTime);
 
-    // reset code duration defaults to 50us
+    // reset code = LOW for minimum 50 or 280 us
     LEDtxReset[0].level0 = 0;
-    LEDtxReset[0].duration0 = 500;
+    LEDtxReset[0].duration0 = 1500;
     LEDtxReset[0].level1 = 0;
-    LEDtxReset[0].duration1 = 500;
+    LEDtxReset[0].duration1 = 1500;
 
     memset(LEDdata, 0, sizeof(LEDdata));
 }
@@ -96,20 +96,20 @@ void LEDtransmitData(void)
             }
 
             for (bit = 0; bit < 8; bit++)
-            {
-                if (data & (1 << (7 - bit))) // bit 1 = 0.25 us HI + 1.0 us LO
+            {                                // 1 tick = 0.1 us
+                if (data & (1 << (7 - bit))) // bit 1 = 1.0 us HI + 0.2 us LO
                 {
                     LEDtxBuffer[streamBitIdx].level0 = 1;
-                    LEDtxBuffer[streamBitIdx].duration0 = 10;
+                    LEDtxBuffer[streamBitIdx].duration0 = 12;
                     LEDtxBuffer[streamBitIdx].level1 = 0;
-                    LEDtxBuffer[streamBitIdx].duration1 = 2;
+                    LEDtxBuffer[streamBitIdx].duration1 = 3;
                 }
-                else // bit 0 = 1.0 us HI + 1.0 us LO
+                else                          // bit 0 = 0.2 us HI + 1.0 us LO
                 {
                     LEDtxBuffer[streamBitIdx].level0 = 1;
-                    LEDtxBuffer[streamBitIdx].duration0 = 2;
+                    LEDtxBuffer[streamBitIdx].duration0 = 3;
                     LEDtxBuffer[streamBitIdx].level1 = 0;
-                    LEDtxBuffer[streamBitIdx].duration1 = 10;
+                    LEDtxBuffer[streamBitIdx].duration1 = 12;
                 }
                 streamBitIdx++;
             }
@@ -126,12 +126,12 @@ void LED_SetPixelColor(int LedNum, uint32_t RGB, bool UpdateNow)
     if (LedNumOffset < 0)
         LedNumOffset += NR_OF_LEDS;
 
-    if ((LedNumOffset < 0) || (LedNumOffset >= NR_OF_LEDS) || (Dimming == 0))
+    if ((LedNumOffset < 0) || (LedNumOffset >= NR_OF_LEDS) || (GlobalBrightness == 0))
         return;
 
-    LEDdata[LedNumOffset].Red = (((RGB >> 16) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNumOffset].Green = (((RGB >> 8) & 0xFF) * Dimming) >> 8;
-    LEDdata[LedNumOffset].Blue = (((RGB) & 0xFF) * Dimming) >> 8;
+    LEDdata[LedNumOffset].Red = (((RGB >> 16) & 0xFF) * GlobalBrightness) >> 8;
+    LEDdata[LedNumOffset].Green = (((RGB >> 8) & 0xFF) * GlobalBrightness) >> 8;
+    LEDdata[LedNumOffset].Blue = (((RGB) & 0xFF) * GlobalBrightness) >> 8;
 
     if (UpdateNow)
     {
@@ -139,16 +139,17 @@ void LED_SetPixelColor(int LedNum, uint32_t RGB, bool UpdateNow)
     }
 }
 
-void LED_SetDimming(byte dim)
+void LED_SetBrigtness(byte bright)
 {
-    Dimming = gammaCorrection(dim);
-    if (Dimming == 0)
+    GlobalBrightness = gammaCorrection(bright);
+    if (GlobalBrightness == 0)
         LED_clear(true);
 }
 
-byte LED_GetDimming(void)
+// global brightness == 0
+bool LED_mustBeOff(void)
 {
-    return Dimming;
+  return GlobalBrightness == 0;
 }
 
 void LED_clear(bool UpdateNow)
@@ -166,9 +167,9 @@ void LED_allSameColor(uint32_t RGB, bool UpdateNow)
   uint32_t R = (RGB & 0xFF0000) >> 16;
   uint32_t G = (RGB & 0x00FF00) >> 8;
   uint32_t B = (RGB & 0x0000FF);
-  R = (R * Dimming) >> 8;
-  G = (G * Dimming) >> 8;
-  B = (B * Dimming) >> 8;
+  R = (R * GlobalBrightness) >> 8;
+  G = (G * GlobalBrightness) >> 8;
+  B = (B * GlobalBrightness) >> 8;
 
     for (int LedNum = 0; LedNum < NR_OF_LEDS; LedNum++)
     {

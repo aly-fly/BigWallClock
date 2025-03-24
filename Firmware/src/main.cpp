@@ -20,6 +20,7 @@
 #include "OTA.h"
 #include "SerialCommands.h"
 #include "ResetReason.h"
+#include "utils.h"
 
 #ifdef MQTT_ENABLED
 #include "Mqtt_client_HA.h"
@@ -180,12 +181,14 @@ int CurrentHour12, EncoderPosMT12;
 int TimeCurrent, TimeDisplayed; // 0...131'071 (2^17)
 int delta;                      // positive -> move forward
 float speedAdj, speedAdjFiltered, speedMotor;
-bool filterValid = false;
+bool speedFilterValid = false;
 bool ErrorCounterLogged = false;
 
 int LastHour = -1;
+float MotorTemperatureFiltered = 0;
 float MotorTemperature = 0;
 float MotorTempLastLogged = -100;
+bool tempFilterValid = false;
 
 int heartBeatLed = 0;
 
@@ -232,10 +235,10 @@ void MainLoopClockTasks(void)
           speedAdj = (float)delta / 600; // P regulator
 
           // low-pass filter for small movements
-          if ((abs(speedAdj) > 2) || (!filterValid))
+          if ((abs(speedAdj) > 2) || (!speedFilterValid))
           {
             speedAdjFiltered = speedAdj; // pass through - no filter
-            filterValid = true;
+            speedFilterValid = true;
           }
           else
           {
@@ -247,7 +250,7 @@ void MainLoopClockTasks(void)
         } // encoder no error
         else
         { // encoder error
-          filterValid = false;
+          speedFilterValid = false;
           ClockError = true;
         }
 
@@ -262,7 +265,7 @@ void MainLoopClockTasks(void)
       } // encoder read ok
       else
       { // reading encoder failed
-        filterValid = false;
+        speedFilterValid = false;
         ClockError = true;
       }
 
@@ -279,7 +282,7 @@ void MainLoopClockTasks(void)
     } // clock enabled
     else
     {
-      filterValid = false;
+      speedFilterValid = false;
       if (encoderRead(false)) // print only if encoder encounters an error
         if ((EncoderPosMT == 12) && (EncoderPosST > 100))
           EncoderSetMT(0);
@@ -310,11 +313,24 @@ void MainLoopClockTasks(void)
     delay(500);
     MoveConstSpeed(+SPEED_LIMIT); // max speed forward
     delay(600);
-    filterValid = false;
+    speedFilterValid = false;
   }
 
-  MotorTemperature = TempSensorRead();
-  MqttStatusTemperture = round(MotorTemperature);
+  float MotorTemperatureRaw = TempSensorRead();
+
+  // low-pass filter
+  if ((abs(MotorTemperatureRaw - MotorTemperatureFiltered) > 7) || (!tempFilterValid))
+  {
+    MotorTemperatureFiltered = MotorTemperatureRaw; // pass through - no filter
+    tempFilterValid = true;
+  }
+  else
+  {
+    MotorTemperatureFiltered = (MotorTemperatureRaw * 0.05) + (MotorTemperatureFiltered * 0.95);
+  }
+
+  MotorTemperature = roundToOneDecimal(MotorTemperatureFiltered);
+
   if (abs(MotorTempLastLogged - MotorTemperature) > 4)
   {
     Log("Motor temperature = %.1f C", MotorTemperature);
@@ -438,10 +454,18 @@ void MainLoopMQTTTasks(void)
     LogNS("CMD: Rainbow sec = %.1f\r\n", MqttCommandRainbowSec);
     MqttCommandReceived = true;
   }
+  /*
   if (MqttCommandDotsReceived)
   {
     MqttCommandDotsReceived = false;
     LogNS("CMD: Dots = %d\r\n", MqttCommandDots);
+    MqttCommandReceived = true;
+  }
+  */
+  if (MqttCommandDotsBrightnessReceived)
+  {
+    MqttCommandDotsBrightnessReceived = false;
+    LogNS("CMD: Dots brightness = %d\r\n", MqttCommandDotsBrightness);
     MqttCommandReceived = true;
   }
 
@@ -461,13 +485,15 @@ void MainLoopMQTTTasks(void)
     }
 */
 
-  // copy - confirm received values
+  // copy received values and fill sensors
   MqttStatusBrightness = MqttCommandBrightness; // LED_GetDimming();
   MqttStatusPower = MqttCommandPower;           // LED_GetDimming() > 0;
   strncpy(MqttStatusEffect, Effect[MqttCommandEffectNumber].c_str(), sizeof(MqttStatusEffect) - 1);
   MqttStatusEffect[sizeof(MqttStatusEffect) - 1] = '\0';
   MqttStatusRainbowSec = MqttCommandRainbowSec;
-  MqttStatusDots = MqttCommandDots;
+  // MqttStatusDots = MqttCommandDots;
+  MqttStatusDotsBrightness = MqttCommandDotsBrightness;
+  MqttStatusTemperture = MotorTemperature;
   MqttStatusRssi = WifiGetSignalLevel();
   MqttStatusErrorWarning = ErrorCounter;
 
@@ -490,27 +516,29 @@ void MainLoopLEDTasks(void)
     if ((CurrentHour >= NIGHT_TIME) || (CurrentHour < DAY_TIME))
     {
       LED_clear(true);
-      LED_SetDimming(0);
-      MqttCommandPower = false;
+      LED_SetBrigtness(0);
+      return; // don't process anything else. Keep it off.
     }
     else
     {
-      MqttCommandPower = true;
       if (CurrentHour >= EVENING_TIME)
       {
-        LED_SetDimming(EVENING_TIME_DIMMING);
+        LED_SetBrigtness(EVENING_TIME_DIMMING);
       }
       else
       {
-        LED_SetDimming(DAY_TIME_BRIGHTNESS);
+        LED_SetBrigtness(DAY_TIME_BRIGHTNESS);
       }
     }
     LastHour = CurrentHour;
   }
 
+  if (LED_mustBeOff())
+    return; // don't process anything else. Keep it off.
+
   if (!MqttCommandPower)
   {
-    LED_clear(false); // OFF
+    LED_clear(false); // background off
   }
   else
   {
@@ -541,24 +569,34 @@ void MainLoopLEDTasks(void)
     }
   } // power = on
 
-  if (MqttCommandDots || ClockError || ClockWarning)
-  {
-    if (ClockError)
-      LEDcolor = clREDbright;
-    else if (ClockWarning)
-      LEDcolor = clORANGEbright;
-    else if (ClockEnabled)
-      LEDcolor = clGREENdim;
-    else
-      LEDcolor = clPINKbright;
+  if (ClockError)
+    LEDcolor = clREDbright;
+  else if (ClockWarning)
+    LEDcolor = clORANGEbright;
+  else if (ClockEnabled)
+    LEDcolor = clBLUEdim;
+  else
+    LEDcolor = clPINKbright;
 
-    LED_showSingleDot(0.00, LEDcolor, false);
+  LED_showSingleDot(0.00, LEDcolor, false);
+  if (ClockError || ClockWarning)
+  {
     LED_showSingleDot(0.25, LEDcolor, false);
     LED_showSingleDot(0.50, LEDcolor, false);
     LED_showSingleDot(0.75, LEDcolor, false);
   }
 
-  LED_showSingleDot((float)CurrentSecond / 60, SECONDS_DOT_COLOR, true); // push everything to the LED strip
+  LEDcolor = SECONDS_DOT_COLOR;
+  adjustColorBrightness(&LEDcolor, MqttCommandDotsBrightness);
+  LED_showSingleDot((float)CurrentSecond / 60, LEDcolor, false);
+
+  LEDcolor = MINUTE_DOT_COLOR;
+  adjustColorBrightness(&LEDcolor, MqttCommandDotsBrightness);
+  LED_showSingleDot((float)CurrentMinute / 60, LEDcolor, false);
+
+  LEDcolor = HOUR_DOT_COLOR;
+  adjustColorBrightness(&LEDcolor, MqttCommandDotsBrightness);
+  LED_showSingleDot((float)CurrentHour12 / 12, LEDcolor, true); // push everything to the LED strip
 }
 
 //========================================================================================================

@@ -349,3 +349,10 @@ calculated_crc = ~(CRC_SPI_97_64bit(dw_CRCinputData))& 0xFF; //inverted CRC
 }
 */
 
+float roundToOneDecimal(float value) 
+{
+  value = value * 10;
+  value = round(value);
+  value = value / 10;
+  return value;
+}

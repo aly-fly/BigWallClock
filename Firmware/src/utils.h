@@ -24,4 +24,6 @@ char        utf8ascii ( char ascii ) ;                             // Convert UT
 void        utf8ascii_ip ( char* s ) ;                             // Convert UTF to Ascii in place
 String      utf8ascii ( const char* s ) ;                          // Convert UTF to Ascii as String
 
+float roundToOneDecimal(float value);
+
 #endif

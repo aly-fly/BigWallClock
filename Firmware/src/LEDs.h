@@ -2,8 +2,8 @@
 #include <stdint.h>
 
 void LED_init(void);
-void LED_SetDimming (byte dim);
-byte LED_GetDimming(void);
+void LED_SetBrigtness (byte bright);
+bool LED_mustBeOff(void);
 void LED_SetPixelColor(int LedNum, uint32_t RGB, bool UpdateNow = false);
 void LED_clear(bool UpdateNow);
 void LED_allSameColor(uint32_t RGB, bool UpdateNow);

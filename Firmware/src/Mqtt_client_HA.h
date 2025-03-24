@@ -38,9 +38,14 @@ extern float MqttCommandRainbowSec;
 extern bool MqttCommandRainbowSecReceived;
 extern float MqttStatusRainbowSec;
 
+/*
 extern bool MqttCommandDots;
 extern bool MqttCommandDotsReceived;
 extern bool MqttStatusDots;
+*/
+extern uint8_t MqttCommandDotsBrightness;
+extern bool MqttCommandDotsBrightnessReceived;
+extern uint8_t MqttStatusDotsBrightness;
 
 // read-only statuses
 extern int MqttStatusRssi;

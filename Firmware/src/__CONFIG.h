@@ -59,6 +59,8 @@ decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Va
 
 #define MQTT_HOME_ASSISTANT_DISCOVERY                     1             // Uncomment if you want HA auto-discovery
 #define MQTT_RETAIN_DISCOVERY_MESSAGES                    false         // https://www.home-assistant.io/integrations/mqtt/#discovery-messages-and-availability
+// retain discovery = true:  Configuration is stored in the MQTT broker. HA directly responds to the existing messages. Configuration can be deleted on the MQTT broker (use MQTT Explorer program).  Restart of the broker, device or HA does not clear the config.
+// retain discovery = false: Configuration is stored in the HA and can be deleted in Settings -> Devices -> MQTT. Restart of the broker, device or HA does not clear the config.
 #define MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER "Aljaz"       // Name of the manufacturer shown in HA
 #define MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL        DEVICE_NAME   // Name of the model shown in HA
 //#define MQTT_HOME_ASSISTANT_DISCOVERY_SW_VERSION          VERSION       // Firmware version shown in HA
@@ -130,6 +132,8 @@ decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Va
 // ********************* LED *********************
 
 #define WS2812_LED_PIN      GPIO_NUM_32
+#define HOUR_DOT_COLOR      clREDbright
+#define MINUTE_DOT_COLOR    clGREENbright
 #define SECONDS_DOT_COLOR   clWHITEbright
 
 #define EVENING_TIME_DIMMING     25

@@ -20,21 +20,18 @@ void OTA_init(void)
 
   ArduinoOTA.onStart([]()
                      {
-                       const char *msga = "OTA Update Started";
-                       const char *msgb = "";
                        if (ArduinoOTA.getCommand() == U_FLASH)
                        {
-                         msgb = "Type: sketch";
+                         Log("OTA Update Started. Loading Program.");
                        }
                        else
                        {
-                         msgb = "Type: filesystem"; // U_SPIFFS, U_LITTLEFS
+                         Log("OTA Update Started. Loading Data section.");
                        }
-                       Log(msga); // Show messages in debug
-                       Log(msgb);
+
                        // stop any interrupts or background tasks here...
                        // ...
-                       divisor = 99;
+                       divisor = 99; // update LEDs imediatelly
                      });
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total)
@@ -51,14 +48,13 @@ void OTA_init(void)
 
   ArduinoOTA.onEnd([]()
                    {
-    const char* msg = "OTA Done!" ;
-    Log(msg) ;                     // Show message in debug
+    Log("OTA Update Finished.");
+    loggerPurgeToFile(true);
     LED_allSameColor(clBLUEdim, true);
     delay (600); });
 
   ArduinoOTA.onError([](ota_error_t error)
                      {
-    const char* msga = "OTA Error" ;
     const char* msgb = "" ;
     if ( error == OTA_AUTH_ERROR )
     {
@@ -80,9 +76,8 @@ void OTA_init(void)
     {
       msgb = "End Failed" ;
     }
-    Log(msga) ;                    // Show messages in debug
-    Log(msgb) ;
-
+    Log("OTA Error: %s", msgb);
+    loggerPurgeToFile(true);
     LED_allSameColor(clREDdim, true);
     delay (2000); });
 
