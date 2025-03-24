@@ -89,7 +89,7 @@ int MqttStatusErrorCounter = 0;
 int MqttStatusErrorCounterLastSent = 999;
 
 #define TopicErrorText "error_text"
-String MqttStatusErrorText = ".";
+String MqttStatusErrorText = "-";
 String MqttStatusErrorTextLastSent = "xyz";
 
 // ===========================================================

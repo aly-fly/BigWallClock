@@ -205,7 +205,7 @@ void MainLoopClockTasks(void)
     return; // run 10x per second
   LastTimeClockTaskRun = millis();
 
-  ClockErrorText = "."; // not an empty string
+  ClockErrorText = "-"; // not an empty string
 
   ClockWarning = false;
   ClockError = false;
@@ -520,6 +520,7 @@ void MainLoopLEDTasks(void)
     return; // run 10x per second
   LastTimeLEDTaskRun = millis();
 
+  /*
   if (CurrentHour != LastHour)
   {
     if ((CurrentHour >= NIGHT_TIME) || (CurrentHour < DAY_TIME))
@@ -541,9 +542,9 @@ void MainLoopLEDTasks(void)
     }
     LastHour = CurrentHour;
   }
-
   if (LED_mustBeOff())
     return; // don't process anything else. Keep it off.
+*/
 
   if (!ConfigBgPower)
   {
@@ -595,17 +596,22 @@ void MainLoopLEDTasks(void)
     LED_showSingleDot(0.75, LEDcolor, false);
   }
 
-  LEDcolor = SECONDS_DOT_COLOR;
-  adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
-  LED_showSingleDot((float)CurrentSecond / 60, LEDcolor, false);
+  if (ConfigDotsBrightness > 0)
+  {
+    LEDcolor = SECONDS_DOT_COLOR;
+    adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
+    LED_showSingleDot((float)CurrentSecond / 60, LEDcolor, false);
 
-  LEDcolor = MINUTE_DOT_COLOR;
-  adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
-  LED_showSingleDot((float)CurrentMinute / 60, LEDcolor, false);
+    LEDcolor = MINUTE_DOT_COLOR;
+    adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
+    LED_showSingleDot((float)CurrentMinute / 60, LEDcolor, false);
 
-  LEDcolor = HOUR_DOT_COLOR;
-  adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
-  LED_showSingleDot((((float)CurrentHour12 + (float)CurrentMinute / 60)) / 12, LEDcolor, true); // push everything to the LED strip
+    LEDcolor = HOUR_DOT_COLOR;
+    adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
+    LED_showSingleDot((((float)CurrentHour12 + (float)CurrentMinute / 60)) / 12, LEDcolor, false);
+  }
+
+  LED_transmitData(); // push everything to the LED strip
 }
 
 //========================================================================================================

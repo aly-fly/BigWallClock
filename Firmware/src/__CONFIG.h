@@ -27,11 +27,11 @@ find your string here: https://github.com/nayarsystems/posix_tz_db/blob/master/z
 decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Variable.html
 */
 #define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"  // Europe/Ljubljana
-
+/*
 #define DAY_TIME       6
 #define EVENING_TIME  22
 #define NIGHT_TIME    23
-
+*/
 // ********************* WiFi config *********************
 //#define WIFI_SSID  "..." -> enter into the file __CONFIG_SECRETS.h
 //#define WIFI_PASSWD "..."
