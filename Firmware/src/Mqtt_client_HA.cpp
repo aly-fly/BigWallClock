@@ -2,10 +2,10 @@
 #include "__CONFIG.h"
 #include "Logger.h"
 #include "Version.h"
-
+#include "GlobalVariables.h"
 #include "Mqtt_client_HA.h"
-#ifdef MQTT_ENABLED
 
+#ifdef MQTT_ENABLED
 #include "WiFi.h" // for ESP32
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -47,46 +47,32 @@ bool availabilityReported = false;
 // ========== APPLICATION VARIABLES ==========
 
 // commands from server; states to be returned; last value that was sent
-#define TopicLight "back"
-bool MqttCommandPower = true;
+#define TopicLight "back_light"
 bool MqttCommandPowerReceived = false;
-bool MqttStatusPower = false;
 bool MqttStatusPowerLastSent = false;
 
-uint8_t MqttCommandBrightness = 127;
 bool MqttCommandBrightnessReceived = false;
-uint8_t MqttStatusBrightness = 0;
 uint8_t MqttStatusBrightnessLastSent = 0;
 
-char MqttCommandEffect[EffectTxtLen] = "";
 bool MqttCommandEffectReceived = false;
-char MqttStatusEffect[EffectTxtLen] = "";
-char MqttStatusEffectLastSent[EffectTxtLen] = "";
-const String Effect[NumEffects] =
+String MqttStatusEffectLastSent = "";
+const String EffectList[NumEffects] =
     {"Static color", "Uniform rainbow", "Travelling full rainbow", "Travelling partial rainbow"};
-int MqttCommandEffectNumber = 0;
 
-uint32_t MqttCommandColor = 0x002233; // very dim blue-green
 bool MqttCommandColorReceived = false;
 
 #define TopicRainbowSec "rainbow"
-float MqttCommandRainbowSec = 30;
 bool MqttCommandRainbowSecReceived = false;
-float MqttStatusRainbowSec = 0;
 float MqttStatusRainbowSecLastSent = 0;
 
 /*
 #define TopicDots "dots"
-bool MqttCommandDots = true;
 bool MqttCommandDotsReceived = false;
-bool MqttStatusDots = true;
 bool MqttStatusDotsLastSent = false;
 */
 
 #define TopicDotsBrightness "dots_brightness"
-uint8_t MqttCommandDotsBrightness = 200;
 bool MqttCommandDotsBrightnessReceived = false;
-uint8_t MqttStatusDotsBrightness = 0;
 uint8_t MqttStatusDotsBrightnessLastSent = 0;
 
 // read-only statuses
@@ -98,15 +84,14 @@ int MqttStatusRssiLastSent = 999;
 float MqttStatusTemperture = 0;
 float MqttStatusTempertureLastSent = 999;
 
-#define TopicErrorWarning "errorCounter"
-int MqttStatusErrorWarning = 0;
-int MqttStatusErrorWarningLastSent = 999;
+#define TopicErrorWarning "error_counter"
+int MqttStatusErrorCounter = 0;
+int MqttStatusErrorCounterLastSent = 999;
 
-/*
-#define TopicErrorWarning "errorText"
-int MqttStatusErrorWarning = 0;
-int MqttStatusErrorWarningLastSent = 999;
-*/
+#define TopicErrorText "error_text"
+String MqttStatusErrorText = ".";
+String MqttStatusErrorTextLastSent = "xyz";
+
 // ===========================================================
 
 /*
@@ -149,24 +134,23 @@ void MqttPublishValues(bool forceUpdateEverything)
     }
 
     if (forceUpdateEverything ||
-        MqttStatusPower != MqttStatusPowerLastSent ||
-        MqttStatusBrightness != MqttStatusBrightnessLastSent ||
-        strcmp(MqttStatusEffect, MqttStatusEffectLastSent) != 0)
+        ConfigBgPower != MqttStatusPowerLastSent ||
+        ConfigBgBrightness != MqttStatusBrightnessLastSent ||
+        ConfigBgEffectStr != MqttStatusEffectLastSent)
     {
       JsonDocument state;
-      state["state"] = MqttStatusPower == 0 ? MQTT_STATE_OFF : MQTT_STATE_ON;
-      state["brightness"] = MqttStatusBrightness;
-      state["effect"] = MqttStatusEffect;
+      state["state"] = ConfigBgPower == 0 ? MQTT_STATE_OFF : MQTT_STATE_ON;
+      state["brightness"] = ConfigBgBrightness;
+      state["effect"] = ConfigBgEffectStr;
 
       char buffer[256];
       serializeJson(state, buffer);
       const char *topic = concat3(MQTT_CLIENT, "/", TopicLight);
       if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
         return;
-      MqttStatusPowerLastSent = MqttStatusPower;
-      MqttStatusBrightnessLastSent = MqttStatusBrightness;
-      strncpy(MqttStatusEffectLastSent, MqttStatusEffect, sizeof(MqttStatusEffectLastSent) - 1);
-      MqttStatusEffectLastSent[sizeof(MqttStatusEffectLastSent) - 1] = '\0';
+      MqttStatusPowerLastSent = ConfigBgPower;
+      MqttStatusBrightnessLastSent = ConfigBgBrightness;
+      MqttStatusEffectLastSent = ConfigBgEffectStr;
 
       Serial.print("TX MQTT: ");
       Serial.print(topic);
@@ -175,17 +159,17 @@ void MqttPublishValues(bool forceUpdateEverything)
       state.clear();
     }
 
-    if (forceUpdateEverything || (abs(MqttStatusRainbowSec - MqttStatusRainbowSecLastSent) > 0.2))
+    if (forceUpdateEverything || (abs(ConfigRainbowSec - MqttStatusRainbowSecLastSent) > 0.2))
     {
       JsonDocument state;
-      state["state"] = MqttStatusRainbowSec;
+      state["state"] = ConfigRainbowSec;
 
       char buffer[256];
       serializeJson(state, buffer);
       const char *topic = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
       if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
         return;
-      MqttStatusRainbowSecLastSent = MqttStatusRainbowSec;
+      MqttStatusRainbowSecLastSent = ConfigRainbowSec;
 
       Serial.print("TX MQTT: ");
       Serial.print(topic);
@@ -213,17 +197,17 @@ void MqttPublishValues(bool forceUpdateEverything)
           state.clear();
         }
     */
-    if (forceUpdateEverything || MqttStatusDotsBrightness != MqttStatusDotsBrightnessLastSent)
+    if (forceUpdateEverything || ConfigDotsBrightness != MqttStatusDotsBrightnessLastSent)
     {
       JsonDocument state;
-      state["state"] = MqttStatusDotsBrightness;
+      state["state"] = ConfigDotsBrightness;
 
       char buffer[256];
       serializeJson(state, buffer);
       const char *topic = concat3(MQTT_CLIENT, "/", TopicDotsBrightness);
       if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
         return;
-      MqttStatusDotsBrightnessLastSent = MqttStatusDotsBrightness;
+      MqttStatusDotsBrightnessLastSent = ConfigDotsBrightness;
 
       Serial.print("TX MQTT: ");
       Serial.print(topic);
@@ -270,17 +254,36 @@ void MqttPublishValues(bool forceUpdateEverything)
       state.clear();
     }
 
-    if (forceUpdateEverything || MqttStatusErrorWarning != MqttStatusErrorWarningLastSent)
+    if (forceUpdateEverything || MqttStatusErrorCounter != MqttStatusErrorCounterLastSent)
     {
       JsonDocument state;
-      state["state"] = (float)MqttStatusErrorWarning;
+      state["state"] = (float)MqttStatusErrorCounter;
 
       char buffer[256];
       serializeJson(state, buffer);
       const char *topic = concat3(MQTT_CLIENT, "/", TopicErrorWarning);
       if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
         return;
-      MqttStatusErrorWarningLastSent = MqttStatusErrorWarning;
+      MqttStatusErrorCounterLastSent = MqttStatusErrorCounter;
+
+      Serial.print("TX MQTT: ");
+      Serial.print(topic);
+      Serial.print(" ");
+      Serial.println(buffer);
+      state.clear();
+    }
+
+    if (forceUpdateEverything || MqttStatusErrorText != MqttStatusErrorTextLastSent)
+    {
+      JsonDocument state;
+      state["state"] = MqttStatusErrorText;
+
+      char buffer[256];
+      serializeJson(state, buffer);
+      const char *topic = concat3(MQTT_CLIENT, "/", TopicErrorText);
+      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+        return;
+      MqttStatusErrorTextLastSent = MqttStatusErrorText;
 
       Serial.print("TX MQTT: ");
       Serial.print(topic);
@@ -329,6 +332,7 @@ bool MqttReportDiscovery()
   discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicLight);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Back light";
+  discovery["icon"] = "mdi:television-ambient-light"; //"mdi:sun-wireless";
   discovery["schema"] = "json";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicLight);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicLight);
@@ -339,7 +343,7 @@ bool MqttReportDiscovery()
   discovery["effect"] = true;
   for (size_t i = 0; i < NumEffects; i++)
   {
-    discovery["effect_list"][i] = Effect[i];
+    discovery["effect_list"][i] = EffectList[i];
   }
   serializeJson(discovery, json_buffer);
   const char *topic1 = concat5("homeassistant/light/", MQTT_CLIENT, "_", TopicLight, "/light/config");
@@ -365,6 +369,7 @@ bool MqttReportDiscovery()
   discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicRainbowSec);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Rainbow, sec";
+  discovery["icon"] = "mdi:play-speed";
   discovery["unit_of_measurement"] = "sec";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
@@ -431,6 +436,7 @@ bool MqttReportDiscovery()
   discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicDotsBrightness);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Dots brightness";
+  discovery["icon"] = "mdi:dots-circle";
   discovery["unit_of_measurement"] = ".";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicDotsBrightness);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicDotsBrightness);
@@ -465,6 +471,7 @@ bool MqttReportDiscovery()
   discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicRssi);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "RSSI";
+  discovery["icon"] = "mdi:wifi";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicRssi);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicRssi);
   discovery["value_template"] = "{{ value_json.state }}";
@@ -493,6 +500,7 @@ bool MqttReportDiscovery()
   discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicTemperature);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Motor temperature";
+  discovery["icon"] = "mdi:sun-thermometer-outline";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicTemperature);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicTemperature);
   discovery["value_template"] = "{{ value_json.state }}";
@@ -508,7 +516,7 @@ bool MqttReportDiscovery()
   Serial.println(json_buffer);
   discovery.clear();
 
-  // errors - SENSOR
+  // error counter - SENSOR
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -521,6 +529,7 @@ bool MqttReportDiscovery()
   discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicErrorWarning);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Error counter";
+  discovery["icon"] = "mdi:counter";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorWarning);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorWarning);
   discovery["value_template"] = "{{ value_json.state }}";
@@ -532,6 +541,36 @@ bool MqttReportDiscovery()
     return false;
   Serial.print("TX MQTT: ");
   Serial.print(topic6);
+  Serial.print(" ");
+  Serial.println(json_buffer);
+  discovery.clear();
+
+  // error text - SENSOR
+  // https://www.home-assistant.io/integrations/sensor.mqtt/
+  discovery["device"]["identifiers"][0] = MQTT_CLIENT;
+  discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
+  discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["name"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
+  discovery["device"]["sw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_SW_VERSION;
+  discovery["device"]["hw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_HW_VERSION;
+  discovery["device"]["connections"][0][0] = "mac";
+  discovery["device"]["connections"][0][1] = WiFi.macAddress();
+  discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicErrorText);
+  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicErrorText);
+  discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
+  discovery["name"] = "Error descr.";
+  discovery["icon"] = "mdi:exclamation-thick";
+  discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorText);
+  discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorText);
+  discovery["value_template"] = "{{ value_json.state }}";
+  //discovery["unit_of_measurement"] = "...";
+  serializeJson(discovery, json_buffer);
+  const char *topic7 = concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicErrorText, "/sensor/config");
+  delay(250);
+  if (!MQTTclient.publish(topic7, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
+    return false;
+  Serial.print("TX MQTT: ");
+  Serial.print(topic7);
   Serial.print(" ");
   Serial.println(json_buffer);
   discovery.clear();
@@ -771,26 +810,25 @@ void callback(char *topic, byte *payload, unsigned int length)
 
     if (doc["state"].is<const char *>())
     {
-      MqttCommandPower = strcmp(doc["state"], MQTT_STATE_ON) == 0;
+      ConfigBgPower = strcmp(doc["state"], MQTT_STATE_ON) == 0;
       MqttCommandPowerReceived = true;
     }
     if (doc["brightness"].is<int>())
     {
-      MqttCommandBrightness = doc["brightness"];
+      ConfigBgBrightness = doc["brightness"];
       MqttCommandBrightnessReceived = true;
     }
     if (doc["effect"].is<const char *>())
     {
-      strncpy(MqttCommandEffect, doc["effect"], sizeof(MqttCommandEffect) - 1);
-      MqttCommandEffect[sizeof(MqttCommandEffect) - 1] = '\0';
+      ConfigBgEffectStr = doc["effect"].as<String>();
       MqttCommandEffectReceived = true;
 
       // find the number of the effect
       for (int8_t i = 0; i < NumEffects; i++)
       {
-        if (strcmp(MqttCommandEffect, (Effect[i]).c_str()) == 0)
+        if (ConfigBgEffectStr == EffectList[i])
         {
-          MqttCommandEffectNumber = i;
+          ConfigBgEffectNumber = i;
           break;
         }
       }
@@ -802,13 +840,12 @@ void callback(char *topic, byte *payload, unsigned int length)
       byte r = doc["color"]["r"];
       byte g = doc["color"]["g"];
       byte b = doc["color"]["b"];
-      MqttCommandColor = (r << 16) | (g << 8) | (b);
+      ConfigBgColor = (r << 16) | (g << 8) | (b);
       Serial.printf("RGB = %d, %d, %d\r\n", r, g, b);
       MqttCommandColorReceived = true;
       // request for fixed color -> disable effects
-      MqttCommandEffectNumber = 0;
-      strncpy(MqttStatusEffect, Effect[MqttCommandEffectNumber].c_str(), sizeof(MqttStatusEffect) - 1);
-      MqttStatusEffect[sizeof(MqttStatusEffect) - 1] = '\0';
+      ConfigBgEffectNumber = 0;
+      ConfigBgEffectStr = EffectList[ConfigBgEffectNumber];
     }
     doc.clear();
   }
@@ -820,7 +857,7 @@ void callback(char *topic, byte *payload, unsigned int length)
 
     if (doc["state"].is<float>())
     {
-      MqttCommandRainbowSec = doc["state"];
+      ConfigRainbowSec = doc["state"];
       MqttCommandRainbowSecReceived = true;
     }
     doc.clear();
@@ -847,7 +884,7 @@ void callback(char *topic, byte *payload, unsigned int length)
 
     if (doc["state"].is<float>())
     {
-      MqttCommandDotsBrightness = doc["state"];
+      ConfigDotsBrightness = doc["state"];
       MqttCommandDotsBrightnessReceived = true;
     }
     doc.clear();

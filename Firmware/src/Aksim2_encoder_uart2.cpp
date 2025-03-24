@@ -114,6 +114,7 @@ bool encoderRead(bool PrintData)
             {
                 Log("Encoder: MT = %d; ST = %d; E = %d; W = %d;  status = 0x%4X.", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderDetailedStatus);
                 String sDetStatus;
+                sDetStatus.clear();
                 if ((EncoderDetailedStatus & 0x8000) > 0)
                     sDetStatus.concat("Multiturn error  ");
                 if ((EncoderDetailedStatus & 0x4000) > 0)
@@ -145,7 +146,7 @@ bool encoderRead(bool PrintData)
                 if (sDetStatus.length() > 2)
                     Log("Encoder status:  %s.", sDetStatus.c_str());
             }
-            result = true;
+            result = true; // !EncoderError is handled elsewhere
         }
         else
         {
@@ -181,7 +182,7 @@ bool encoderReadAirGap(void)
                 EncoderAirGap = 0;
 
             Log("Encoder: MT = %d; ST = %d; E = %d; W = %d;  SignalLevel = %u; Air gap = %.1f um", EncoderPosMT, EncoderPosST, EncoderError, EncoderWarning, EncoderSignalLevel, EncoderAirGap);
-            result = true;
+            result = true; // !EncoderError is handled elsewhere
         }
         else
         {

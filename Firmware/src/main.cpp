@@ -21,6 +21,7 @@
 #include "SerialCommands.h"
 #include "ResetReason.h"
 #include "utils.h"
+#include "NVS_storage.h"
 
 #ifdef MQTT_ENABLED
 #include "Mqtt_client_HA.h"
@@ -57,6 +58,8 @@ void setup()
     while (1)
       yield();
   }
+
+  storedConfigLoad();
 
   uint32_t tailColor = clBLUEdim;
   LED_showProgressNumber(1, clORANGEbright, tailColor);
@@ -177,10 +180,8 @@ void setup()
 
 // ===============================================================================================================================================================
 
-int CurrentHour12, EncoderPosMT12;
-int TimeCurrent, TimeDisplayed; // 0...131'071 (2^17)
-int delta;                      // positive -> move forward
-float speedAdj, speedAdjFiltered, speedMotor;
+int CurrentHour12;
+float speedAdjFiltered;
 bool speedFilterValid = false;
 bool ErrorCounterLogged = false;
 
@@ -196,11 +197,15 @@ unsigned long LastTimeClockTaskRun = 0;
 
 int LastTimeLEDTaskRun = 0; // limit refresh rate
 
+String ClockErrorText;
+
 void MainLoopClockTasks(void)
 {
   if ((millis() - LastTimeClockTaskRun) < 100)
     return; // run 10x per second
   LastTimeClockTaskRun = millis();
+
+  ClockErrorText = "."; // not an empty string
 
   ClockWarning = false;
   ClockError = false;
@@ -209,20 +214,20 @@ void MainLoopClockTasks(void)
   {
     if (ClockEnabled)
     {
-      speedAdj = 0;
+      float speedAdj = 0;
       if (encoderRead(false)) // print only if encoder encounters an error
       {
         if (!EncoderError)
         {
-          EncoderPosMT12 = (EncoderPosMT % 12);
-          TimeDisplayed = EncoderPosST + EncoderPosMT12 * CPR;
+          int EncoderPosMT12 = (EncoderPosMT % 12);
+          int TimeDisplayed = EncoderPosST + EncoderPosMT12 * CPR; // 0...131'071 (2^17)
 
           CurrentHour12 = (CurrentHour % 12);
-          TimeCurrent = (CurrentHour12 * CPR) + (CurrentMinute * CPR) / 60 + ((CurrentSecond * CPR) / 60 / 60);
+          int TimeCurrent = (CurrentHour12 * CPR) + (CurrentMinute * CPR) / 60 + ((CurrentSecond * CPR) / 60 / 60);
           if (TestMode)
             LogNS("MT12 = %d; Hr = %d; Hr12 = %d;\r\n", EncoderPosMT12, CurrentHour, CurrentHour12);
 
-          delta = TimeCurrent - TimeDisplayed;
+          int delta = TimeCurrent - TimeDisplayed; // positive -> move forward
           // handle overflow at 0:00 and 12:00
           if (delta > CPR12half)
             delta -= CPR12;
@@ -252,6 +257,7 @@ void MainLoopClockTasks(void)
         { // encoder error
           speedFilterValid = false;
           ClockError = true;
+          ClockErrorText.concat("EncoderError ");
         }
 
         if ((EncoderPosMT == 12) && (EncoderPosST > 100))
@@ -261,17 +267,19 @@ void MainLoopClockTasks(void)
         if (EncoderWarning)
         {
           ClockWarning = true;
+          ClockErrorText.concat("EncoderWarning ");
         }
       } // encoder read ok
       else
       { // reading encoder failed
         speedFilterValid = false;
         ClockError = true;
+        ClockErrorText.concat("EncoderReadErr ");
       }
 
       // 400 steps = 1 hour = 60 min = 3600 s
       // speed = 400 steps / 3600 s = 0.11111 step / s
-      speedMotor = 0.11111111;
+      float speedMotor = 0.11111111;
 
       if (abs(speedAdj) > 0.05) // ignore very tiny corrections
       {
@@ -291,6 +299,7 @@ void MainLoopClockTasks(void)
   else
   {
     Log("Getting current time failed!");
+    ClockErrorText.concat("GetTimeFail ");
     ClockError = true;
   }
 
@@ -298,6 +307,7 @@ void MainLoopClockTasks(void)
   if (motSta == MSFAULT)
   {
     Log("Motor failure!");
+    ClockErrorText.concat("MotorFail ");
     ErrorCounter = 4000;
     ClockError = true;
     // disable immediatelly
@@ -308,6 +318,7 @@ void MainLoopClockTasks(void)
   if (motSta == MSSTALL)
   {
     Log("Stall detected. Moving backwards a bit.");
+    ClockErrorText.concat("MotorStall ");
     ErrorCounter += 50;
     MoveConstSpeed(-SPEED_LIMIT); // max speed reverse
     delay(500);
@@ -339,6 +350,7 @@ void MainLoopClockTasks(void)
   if (MotorTemperature > (MOTOR_TEMP_MAX + 5))
   {
     Log("Motor too hot! Temperature = %.1f C", MotorTemperature);
+    ClockErrorText.concat("MotorTooHot ");
     ErrorCounter = 4000;
     ClockError = true;
     // disable immediatelly
@@ -348,12 +360,14 @@ void MainLoopClockTasks(void)
   else if (MotorTemperature > MOTOR_TEMP_MAX)
   {
     Log("Motor overheating! Temperature = %.1f C", MotorTemperature);
+    ClockErrorText.concat("MotorHot ");
     ErrorCounter += 30;
     ClockWarning = true;
   }
   if (MotorTemperature < 10)
   {
     Log("Reading motor temperature failed! Temperature = %.1f C", MotorTemperature);
+    ClockErrorText.concat("TempSensorFail ");
     ErrorCounter = 4000;
     ClockError = true;
   }
@@ -381,6 +395,7 @@ void MainLoopClockTasks(void)
   if ((ErrorCounter > 3000) && ClockEnabled && !TestMode)
   {
     Log("Error counter exceeded threshold. Clock disabled.");
+    ClockErrorText.concat("ErrCntrTooBig ");
     EnableMotor(false);
     ClockEnabled = false;
     ClockError = true;
@@ -400,6 +415,11 @@ void MainLoopClockTasks(void)
 
   if (!WifiIsConnected())
     ClockWarning = true;
+
+  if (ClockWarning)
+    ClockErrorText.concat("WARNING ");
+  if (ClockError)
+    ClockErrorText.concat("ERROR ");
 
   heartBeatLed++;
   if (heartBeatLed >= 10)
@@ -426,32 +446,32 @@ void MainLoopMQTTTasks(void)
   if (MqttCommandPowerReceived)
   {
     MqttCommandPowerReceived = false;
-    LogNS("CMD: Power = %d\r\n", MqttCommandPower);
+    LogNS("CMD: Power = %d\r\n", ConfigBgPower);
     MqttCommandReceived = true;
   }
   if (MqttCommandBrightnessReceived)
   {
     MqttCommandBrightnessReceived = false;
-    LogNS("CMD: Brightness = %d\r\n", MqttCommandBrightness);
+    LogNS("CMD: Brightness = %d\r\n", ConfigBgBrightness);
     // LED_SetDimming(MqttCommandBrightness); // system indicators have own brightness
     MqttCommandReceived = true;
   }
   if (MqttCommandColorReceived)
   {
     MqttCommandColorReceived = false;
-    LogNS("CMD: RGB = 0x%6X\r\n", MqttCommandColor);
+    LogNS("CMD: RGB = 0x%6X\r\n", ConfigBgColor);
     MqttCommandReceived = true;
   }
   if (MqttCommandEffectReceived)
   {
     MqttCommandEffectReceived = false;
-    LogNS("CMD: Effect = %d (%s)\r\n", MqttCommandEffectNumber, MqttCommandEffect);
+    LogNS("CMD: Effect = %d (%s)\r\n", ConfigBgEffectNumber, ConfigBgEffectStr.c_str());
     MqttCommandReceived = true;
   }
   if (MqttCommandRainbowSecReceived)
   {
     MqttCommandRainbowSecReceived = false;
-    LogNS("CMD: Rainbow sec = %.1f\r\n", MqttCommandRainbowSec);
+    LogNS("CMD: Rainbow sec = %.1f\r\n", ConfigRainbowSec);
     MqttCommandReceived = true;
   }
   /*
@@ -465,7 +485,7 @@ void MainLoopMQTTTasks(void)
   if (MqttCommandDotsBrightnessReceived)
   {
     MqttCommandDotsBrightnessReceived = false;
-    LogNS("CMD: Dots brightness = %d\r\n", MqttCommandDotsBrightness);
+    LogNS("CMD: Dots brightness = %d\r\n", ConfigDotsBrightness);
     MqttCommandReceived = true;
   }
 
@@ -474,28 +494,17 @@ void MainLoopMQTTTasks(void)
     lastMqttCommandExecuted = millis();
   }
 
-  /*
-    if ((millis() - lastMqttCommandExecuted) > (MQTT_SAVE_PREFERENCES_AFTER_SEC * 1000)) && (lastMqttCommandExecuted != -1))
-    {
-      lastMqttCommandExecuted = -1;
+  if (((millis() - lastMqttCommandExecuted) > (MQTT_SAVE_PREFERENCES_AFTER_SEC * 1000)) && (lastMqttCommandExecuted != -1))
+  {
+    lastMqttCommandExecuted = -1; // this means data was saved.
+    storedConfigSave();
+  }
 
-      Serial.print("Saving config...");
-      // stored_config.save();
-      Serial.println(" Done.");
-    }
-*/
-
-  // copy received values and fill sensors
-  MqttStatusBrightness = MqttCommandBrightness; // LED_GetDimming();
-  MqttStatusPower = MqttCommandPower;           // LED_GetDimming() > 0;
-  strncpy(MqttStatusEffect, Effect[MqttCommandEffectNumber].c_str(), sizeof(MqttStatusEffect) - 1);
-  MqttStatusEffect[sizeof(MqttStatusEffect) - 1] = '\0';
-  MqttStatusRainbowSec = MqttCommandRainbowSec;
-  // MqttStatusDots = MqttCommandDots;
-  MqttStatusDotsBrightness = MqttCommandDotsBrightness;
+  // fill sensors
   MqttStatusTemperture = MotorTemperature;
   MqttStatusRssi = WifiGetSignalLevel();
-  MqttStatusErrorWarning = ErrorCounter;
+  MqttStatusErrorCounter = ErrorCounter;
+  MqttStatusErrorText = ClockErrorText;
 
   MqttLoopInFreeTime();
 #endif
@@ -536,31 +545,31 @@ void MainLoopLEDTasks(void)
   if (LED_mustBeOff())
     return; // don't process anything else. Keep it off.
 
-  if (!MqttCommandPower)
+  if (!ConfigBgPower)
   {
     LED_clear(false); // background off
   }
   else
   {
     // background effect
-    switch (MqttCommandEffectNumber)
+    switch (ConfigBgEffectNumber)
     {
     case 0: // Static color
-      LEDcolor = MqttCommandColor;
-      adjustColorBrightness(&LEDcolor, MqttCommandBrightness); // background has individually adjustable brightness; not linked to clock's brightness
-      LED_allSameColor(LEDcolor, false);                       // set background
+      LEDcolor = ConfigBgColor;
+      adjustColorBrightness(&LEDcolor, ConfigBgBrightness); // background has individually adjustable brightness; not linked to clock's brightness
+      LED_allSameColor(LEDcolor, false);                    // set background
       break;
 
     case 1: // Uniform rainbow
-      rainbowPattern(8, MqttCommandRainbowSec, MqttCommandBrightness);
+      rainbowPattern(8, ConfigRainbowSec, ConfigBgBrightness);
       break;
 
     case 2: // Travelling full rainbow
-      rainbowPattern(1, MqttCommandRainbowSec, MqttCommandBrightness);
+      rainbowPattern(1, ConfigRainbowSec, ConfigBgBrightness);
       break;
 
     case 3: // Travelling partial rainbow
-      rainbowPattern(3, MqttCommandRainbowSec, MqttCommandBrightness);
+      rainbowPattern(3, ConfigRainbowSec, ConfigBgBrightness);
       break;
 
     default:
@@ -587,16 +596,16 @@ void MainLoopLEDTasks(void)
   }
 
   LEDcolor = SECONDS_DOT_COLOR;
-  adjustColorBrightness(&LEDcolor, MqttCommandDotsBrightness);
+  adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
   LED_showSingleDot((float)CurrentSecond / 60, LEDcolor, false);
 
   LEDcolor = MINUTE_DOT_COLOR;
-  adjustColorBrightness(&LEDcolor, MqttCommandDotsBrightness);
+  adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
   LED_showSingleDot((float)CurrentMinute / 60, LEDcolor, false);
 
   LEDcolor = HOUR_DOT_COLOR;
-  adjustColorBrightness(&LEDcolor, MqttCommandDotsBrightness);
-  LED_showSingleDot((float)CurrentHour12 / 12, LEDcolor, true); // push everything to the LED strip
+  adjustColorBrightness(&LEDcolor, ConfigDotsBrightness);
+  LED_showSingleDot((((float)CurrentHour12 + (float)CurrentMinute / 60)) / 12, LEDcolor, true); // push everything to the LED strip
 }
 
 //========================================================================================================

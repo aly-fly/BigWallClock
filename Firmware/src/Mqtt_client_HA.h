@@ -15,44 +15,21 @@ void MqttLoopInFreeTime();
 // ========== APPLICATION VARIABLES ==========
 
 // commands from server; states to be returned; last value that was sent
-extern bool MqttCommandPower;
 extern bool MqttCommandPowerReceived;
-extern bool MqttStatusPower;
-
-extern uint8_t MqttCommandBrightness;
 extern bool MqttCommandBrightnessReceived;
-extern uint8_t MqttStatusBrightness;
-
 #define NumEffects  4
-#define EffectTxtLen 30
-extern const String Effect[NumEffects];
-extern int MqttCommandEffectNumber;
-extern char MqttCommandEffect[EffectTxtLen];
+extern const String EffectList[NumEffects];
 extern bool MqttCommandEffectReceived;
-extern char MqttStatusEffect[EffectTxtLen];
-
-extern uint32_t MqttCommandColor;
 extern bool MqttCommandColorReceived;
-
-extern float MqttCommandRainbowSec;
 extern bool MqttCommandRainbowSecReceived;
-extern float MqttStatusRainbowSec;
-
-/*
-extern bool MqttCommandDots;
-extern bool MqttCommandDotsReceived;
-extern bool MqttStatusDots;
-*/
-extern uint8_t MqttCommandDotsBrightness;
+//extern bool MqttCommandDotsReceived;
 extern bool MqttCommandDotsBrightnessReceived;
-extern uint8_t MqttStatusDotsBrightness;
 
 // read-only statuses
 extern int MqttStatusRssi;
-
 extern float MqttStatusTemperture;
-
-extern int MqttStatusErrorWarning;
+extern int MqttStatusErrorCounter;
+extern String MqttStatusErrorText;
 
 // ===========================================================
 
