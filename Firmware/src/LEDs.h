@@ -10,6 +10,7 @@ void LED_allSameColor(uint32_t RGB, bool UpdateNow);
 void LED_showSingleDot(float pixel01, uint32_t dotColor, bool UpdateNow);
 void LED_showProgressNumber(int clockNumber, uint32_t dotColor, uint32_t trailColor);
 void LED_showProgressPercent(int percent, uint32_t dotColor, uint32_t trailColor);
+void LED_transmitData(void);
 void LED_test(void);
 
 uint8_t gammaCorrection(uint8_t brightness);

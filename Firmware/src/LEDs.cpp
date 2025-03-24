@@ -10,7 +10,7 @@
 //======================================================================================================================
 
 #define NR_OF_LEDS 128 // 0...127
-#define NR_OF_ALL_BITS (24 * NR_OF_LEDS + 1)
+#define NR_OF_ALL_BITS (24 * NR_OF_LEDS)
 #define LED_OFFSET 64
 
 byte GlobalBrightness = 255;
@@ -25,27 +25,85 @@ struct LEDdata_t
 LEDdata_t LEDdata[NR_OF_LEDS];
 
 rmt_data_t LEDtxBuffer[NR_OF_ALL_BITS];
-//rmt_data_t LEDtxReset[1];
 rmt_obj_t *MyRMT = NULL;
+
+
+// defines copied from FastLED library:
+
+#ifndef F_CPU_RMT_CLOCK_MANUALLY_DEFINED // if user has not defined it manually then...
+#if defined(CONFIG_IDF_TARGET_ESP32C6) && CONFIG_IDF_TARGET_ESP32C6 == 1
+#define F_CPU_RMT_CLOCK_MANUALLY_DEFINED (80 * 1000000)
+#elif defined(CONFIG_IDF_TARGET_ESP32H2) && CONFIG_IDF_TARGET_ESP32H2 == 1
+#define F_CPU_RMT_CLOCK_MANUALLY_DEFINED (80 * 1000000)
+#endif
+
+#ifdef F_CPU_RMT_CLOCK_MANUALLY_DEFINED
+#define F_CPU_RMT (F_CPU_RMT_CLOCK_MANUALLY_DEFINED)
+#else
+#define F_CPU_RMT (APB_CLK_FREQ)
+#endif
+#endif //  F_CPU_RMT_CLOCK_MANUALLY_DEFINED
+
+#define DIVIDER 2 /* 4, 8 still seem to work, but timings become marginal */
+
+// -- Convert ESP32 CPU cycles to RMT device cycles, taking into account the divider
+// RMT Clock is typically APB CLK, which is 80MHz on most devices, but 40MHz on ESP32-H2 and ESP32-C6
+#define RMT_CYCLES_PER_SEC (F_CPU_RMT / DIVIDER)
+#define RMT_CYCLES_PER_ESP_CYCLE (F_CPU / RMT_CYCLES_PER_SEC)
+#define ESP_TO_RMT_CYCLES(n) ((n) / (RMT_CYCLES_PER_ESP_CYCLE))
+
+#define CLOCKLESS_FREQUENCY F_CPU
+
+#define C_NS(_NS) (((_NS * ((CLOCKLESS_FREQUENCY / 1000000L)) + 999)) / 1000)
+
+#define FASTLED_OVERCLOCK 1.0
+#define FASTLED_OVERCLOCK_WS2812 FASTLED_OVERCLOCK
+
+
+// Allow overclocking various LED chipsets in the clockless family.
+// Clocked chips like the APA102 don't need this because they allow
+// you to control the clock speed directly.
+#define C_NS_WS2812(_NS) (C_NS(int(_NS / FASTLED_OVERCLOCK_WS2812)))
+
+#define FASTLED_WS2812_T1 250
+#define FASTLED_WS2812_T2 625
+#define FASTLED_WS2812_T3 375
+
+#define T1	C_NS_WS2812(FASTLED_WS2812_T1)
+#define T2	C_NS_WS2812(FASTLED_WS2812_T2)
+#define T3	C_NS_WS2812(FASTLED_WS2812_T3)
+
+    // T1H
+#define T1H  ESP_TO_RMT_CYCLES(T1 + T2)
+    // T1L
+#define T1L  ESP_TO_RMT_CYCLES(T3) 
+    // T0H
+#define T0H  ESP_TO_RMT_CYCLES(T1)
+    // T0L
+#define T0L  ESP_TO_RMT_CYCLES(T2 + T3)
+
+
+/* LED = WS2812
+  RMT Tick time = 25.0 ns
+  Bit 0 timing: H 250.0 ns - L 1000.0 ns
+  Bit 1 timing: H 875.0 ns - L 375.0 ns
+*/
 
 void LED_init(void)
 {
-    MyRMT = rmtInit(WS2812_LED_PIN, RMT_TX_MODE, RMT_MEM_64);
+    MyRMT = rmtInit(WS2812_LED_PIN, RMT_TX_MODE, RMT_MEM_256);
 
     if (MyRMT == NULL)
     {
         Log("RMT init failed");
     }
-    float tickTime = rmtSetTick(MyRMT, 100); // 1 tick = 0.1 us (divisor = 8)
-    Log("RMT Tick time = %.1f", tickTime);
+//    float tickTime = rmtSetTick(MyRMT, 100); // 1 tick = 0.1 us (divisor = 8)
+    float tickTime = rmtSetTick(MyRMT, 25);    // 1 tick = 25 ns (divisor = 2) <- default
+    Log("RMT Tick time = %.1f ns", tickTime);
 
-    /*
-    // reset code = LOW for minimum 50 or 280 us
-    LEDtxReset[0].level0 = 0;
-    LEDtxReset[0].duration0 = 1500;
-    LEDtxReset[0].level1 = 0;
-    LEDtxReset[0].duration1 = 1500;
-    */
+    Log(" Bit 0 timing: H %.1f ns - L %.1f ns", (tickTime * T0H), (tickTime * T0L));
+    Log(" Bit 1 timing: H %.1f ns - L %.1f ns", (tickTime * T1H), (tickTime * T1L));
+
     memset(LEDdata, 0, sizeof(LEDdata));
 }
 
@@ -73,7 +131,7 @@ void LED_init(void)
 //      ---+             +-------+
 //         |    0.8us    | 0.4us |
 
-void LEDtransmitData(void)
+void LED_transmitData(void)
 {
     int led, color, bit;
     int streamBitIdx = 0;
@@ -101,27 +159,21 @@ void LEDtransmitData(void)
                 if (data & (1 << (7 - bit))) // bit 1 = 1.0 us HI + 0.2 us LO
                 {
                     LEDtxBuffer[streamBitIdx].level0 = 1;
-                    LEDtxBuffer[streamBitIdx].duration0 = 12;
+                    LEDtxBuffer[streamBitIdx].duration0 = T1H;
                     LEDtxBuffer[streamBitIdx].level1 = 0;
-                    LEDtxBuffer[streamBitIdx].duration1 = 3;
+                    LEDtxBuffer[streamBitIdx].duration1 = T1L;
                 }
                 else                          // bit 0 = 0.2 us HI + 1.0 us LO
                 {
                     LEDtxBuffer[streamBitIdx].level0 = 1;
-                    LEDtxBuffer[streamBitIdx].duration0 = 3;
+                    LEDtxBuffer[streamBitIdx].duration0 = T0H;
                     LEDtxBuffer[streamBitIdx].level1 = 0;
-                    LEDtxBuffer[streamBitIdx].duration1 = 12;
+                    LEDtxBuffer[streamBitIdx].duration1 = T0L;
                 }
                 streamBitIdx++;
             }
         }
     }
-
-    // finish with constant HIGH (does not help...)
-    LEDtxBuffer[streamBitIdx].level0 = 1;
-    LEDtxBuffer[streamBitIdx].duration0 = 100;
-    LEDtxBuffer[streamBitIdx].level1 = 1;
-    LEDtxBuffer[streamBitIdx].duration1 = 100;
 
     // Send the data
     rmtWrite(MyRMT, LEDtxBuffer, NR_OF_ALL_BITS);
@@ -142,7 +194,7 @@ void LED_SetPixelColor(int LedNum, uint32_t RGB, bool UpdateNow)
 
     if (UpdateNow)
     {
-        LEDtransmitData();
+        LED_transmitData();
     }
 }
 
@@ -164,8 +216,7 @@ void LED_clear(bool UpdateNow)
     memset(LEDdata, 0, sizeof(LEDdata));
     if (UpdateNow)
     {
-        //rmtWrite(MyRMT, LEDtxReset, 1);
-        LEDtransmitData();
+        LED_transmitData();
     }
 }
 
@@ -186,7 +237,7 @@ void LED_allSameColor(uint32_t RGB, bool UpdateNow)
     }
     if (UpdateNow)
     {
-        LEDtransmitData();
+        LED_transmitData();
     }
 }
 
@@ -201,7 +252,7 @@ void LED_showSingleDot(float pixel01, uint32_t dotColor, bool UpdateNow)
 
     LED_SetPixelColor(idx, dotColor, false);
     if (UpdateNow)
-        LEDtransmitData();
+        LED_transmitData();
 }
 
 void LED_showProgressNumber(int clockNumber, uint32_t dotColor, uint32_t trailColor)
@@ -225,7 +276,7 @@ void LED_showProgressPercent(int percent, uint32_t dotColor, uint32_t trailColor
             color = 0; // 0x000505; // dim blue/green
         LED_SetPixelColor(i, color, false);
     }
-    LEDtransmitData();
+    LED_transmitData();
 }
 
 //=====================================================================================================
