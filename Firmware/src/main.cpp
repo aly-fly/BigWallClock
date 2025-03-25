@@ -579,21 +579,27 @@ void MainLoopLEDTasks(void)
     }
   } // power = on
 
-  if (ClockError)
-    LEDcolor = clREDbright;
-  else if (ClockWarning)
-    LEDcolor = clORANGEbright;
-  else if (ClockEnabled)
-    LEDcolor = clBLUEdim;
-  else
-    LEDcolor = clPINKbright;
-
-  LED_showSingleDot(0.00, LEDcolor, false);
-  if (ClockError || ClockWarning)
+  if ((ConfigDotsBrightness > 0) || ((ConfigBgBrightness > 0) && (ConfigBgPower))) // show status if not total darkness
   {
-    LED_showSingleDot(0.25, LEDcolor, false);
-    LED_showSingleDot(0.50, LEDcolor, false);
-    LED_showSingleDot(0.75, LEDcolor, false);
+    if (ClockError)
+      LEDcolor = clREDbright;
+    else if (ClockWarning)
+      LEDcolor = clORANGEbright;
+    else if (ClockEnabled)
+      LEDcolor = clBLUEdim;
+    else
+      LEDcolor = clPINKbright;
+
+    if ((ConfigDotsBrightness < 64) && (ConfigBgBrightness < 64)) // dimming is required
+      adjustColorBrightness(&LEDcolor, 20);
+
+    LED_showSingleDot(0.00, LEDcolor, false); // just the top one
+    if (ClockError || ClockWarning)
+    {
+      LED_showSingleDot(0.25, LEDcolor, false);
+      LED_showSingleDot(0.50, LEDcolor, false);
+      LED_showSingleDot(0.75, LEDcolor, false);
+    }
   }
 
   if (ConfigDotsBrightness > 0)

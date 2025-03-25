@@ -65,12 +65,6 @@ bool MqttCommandColorReceived = false;
 bool MqttCommandRainbowSecReceived = false;
 float MqttStatusRainbowSecLastSent = 0;
 
-/*
-#define TopicDots "dots"
-bool MqttCommandDotsReceived = false;
-bool MqttStatusDotsLastSent = false;
-*/
-
 #define TopicDotsBrightness "dots_brightness"
 bool MqttCommandDotsBrightnessReceived = false;
 uint8_t MqttStatusDotsBrightnessLastSent = 0;
@@ -177,30 +171,11 @@ void MqttPublishValues(bool forceUpdateEverything)
       Serial.println(buffer);
       state.clear();
     }
-    /*
-        if (forceUpdateEverything || MqttStatusDots != MqttStatusDotsLastSent)
-        {
-          JsonDocument state;
-          state["state"] = MqttStatusDots == 0 ? MQTT_STATE_OFF : MQTT_STATE_ON;
 
-          char buffer[256];
-          serializeJson(state, buffer);
-          const char *topic = concat3(MQTT_CLIENT, "/", TopicDots);
-          if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
-            return;
-          MqttStatusDotsLastSent = MqttStatusDots;
-
-          Serial.print("TX MQTT: ");
-          Serial.print(topic);
-          Serial.print(" ");
-          Serial.println(buffer);
-          state.clear();
-        }
-    */
     if (forceUpdateEverything || ConfigDotsBrightness != MqttStatusDotsBrightnessLastSent)
     {
       JsonDocument state;
-      state["state"] = ConfigDotsBrightness;
+      state["state"] = map(ConfigDotsBrightness, 0, 255, 0, 100); // convert 0..255 to 0..100 %
 
       char buffer[256];
       serializeJson(state, buffer);
@@ -320,6 +295,7 @@ bool MqttReportDiscovery()
   JsonDocument discovery;
 
   // Back Light - LIGHT
+  // https://www.home-assistant.io/integrations/light.mqtt/
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -334,6 +310,7 @@ bool MqttReportDiscovery()
   discovery["name"] = "Back light";
   discovery["icon"] = "mdi:television-ambient-light"; //"mdi:sun-wireless";
   discovery["schema"] = "json";
+  discovery["platform"] = "light";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicLight);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicLight);
   discovery["command_topic"] = concat4(MQTT_CLIENT, "/", TopicLight, "/set");
@@ -370,6 +347,8 @@ bool MqttReportDiscovery()
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Rainbow, sec";
   discovery["icon"] = "mdi:play-speed";
+  discovery["schema"] = "json";
+  discovery["platform"] = "number";
   discovery["unit_of_measurement"] = "sec";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
@@ -390,40 +369,9 @@ bool MqttReportDiscovery()
   Serial.print(" ");
   Serial.println(json_buffer);
   discovery.clear();
-  /*
-    // Dots - SWITCH
-    discovery["device"]["identifiers"][0] = MQTT_CLIENT;
-    discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
-    discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
-    discovery["device"]["name"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
-    discovery["device"]["sw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_SW_VERSION;
-    discovery["device"]["hw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_HW_VERSION;
-    discovery["device"]["connections"][0][0] = "mac";
-    discovery["device"]["connections"][0][1] = WiFi.macAddress();
-    discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicDots);
-    discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicDots);
-    discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
-    discovery["name"] = "Show dots";
-    discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicDots);
-    discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicDots);
-    discovery["command_topic"] = concat4(MQTT_CLIENT, "/", TopicDots, "/set");
-    discovery["value_template"] = "{{ value_json.state }}";
-    discovery["state_on"] = "ON";
-    discovery["state_off"] = "OFF";
-    discovery["payload_on"] = "{\"state\":\"ON\"}";
-    discovery["payload_off"] = "{\"state\":\"OFF\"}";
-    serializeJson(discovery, json_buffer);
-    const char *topic3 = concat5("homeassistant/switch/", MQTT_CLIENT, "_", TopicDots, "/switch/config");
-    delay(250);
-    if (!MQTTclient.publish(topic3, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
-      return false;
-    Serial.print("TX MQTT: ");
-    Serial.print(topic3);
-    Serial.print(" ");
-    Serial.println(json_buffer);
-    discovery.clear();
-  */
+
   // Dots brightness - NUMBER
+  // https://www.home-assistant.io/integrations/number.mqtt/
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -437,14 +385,16 @@ bool MqttReportDiscovery()
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Dots brightness";
   discovery["icon"] = "mdi:dots-circle";
-  discovery["unit_of_measurement"] = ".";
+  discovery["schema"] = "json";
+  discovery["platform"] = "number";
+  discovery["unit_of_measurement"] = "%";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicDotsBrightness);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicDotsBrightness);
   discovery["command_topic"] = concat4(MQTT_CLIENT, "/", TopicDotsBrightness, "/set");
   discovery["command_template"] = "{\"state\":{{value}}}";
   discovery["step"] = 1;
   discovery["min"] = 0;
-  discovery["max"] = 255;
+  discovery["max"] = 100;
   discovery["mode"] = "slider";
   discovery["value_template"] = "{{ value_json.state }}";
   serializeJson(discovery, json_buffer);
@@ -459,6 +409,7 @@ bool MqttReportDiscovery()
   discovery.clear();
 
   // rssi - SENSOR
+  // https://www.home-assistant.io/integrations/sensor.mqtt/
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -472,6 +423,9 @@ bool MqttReportDiscovery()
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "RSSI";
   discovery["icon"] = "mdi:wifi";
+  discovery["schema"] = "json";
+  discovery["platform"] = "sensor";
+  discovery["device_class"] = "signal_strength"; // https://www.home-assistant.io/integrations/sensor#device-class
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicRssi);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicRssi);
   discovery["value_template"] = "{{ value_json.state }}";
@@ -501,6 +455,9 @@ bool MqttReportDiscovery()
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Motor temperature";
   discovery["icon"] = "mdi:sun-thermometer-outline";
+  discovery["schema"] = "json";
+  discovery["platform"] = "sensor";
+  discovery["device_class"] = "temperature"; // https://www.home-assistant.io/integrations/sensor#device-class
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicTemperature);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicTemperature);
   discovery["value_template"] = "{{ value_json.state }}";
@@ -530,6 +487,8 @@ bool MqttReportDiscovery()
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Error counter";
   discovery["icon"] = "mdi:counter";
+  discovery["schema"] = "json";
+  discovery["platform"] = "sensor";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorWarning);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorWarning);
   discovery["value_template"] = "{{ value_json.state }}";
@@ -560,6 +519,8 @@ bool MqttReportDiscovery()
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Error descr.";
   discovery["icon"] = "mdi:exclamation-thick";
+  discovery["schema"] = "json";
+  discovery["platform"] = "sensor";
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorText);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorText);
   discovery["value_template"] = "{{ value_json.state }}";
@@ -724,10 +685,7 @@ bool MqttStart(bool restart)
 
     const char *topic2 = concat4(MQTT_CLIENT, "/", TopicRainbowSec, "/set");
     MQTTclient.subscribe(topic2);
-    /*
-        const char *topic3 = concat4(MQTT_CLIENT, "/", TopicDots, "/set");
-        MQTTclient.subscribe(topic3);
-    */
+
     const char *topic4 = concat4(MQTT_CLIENT, "/", TopicDotsBrightness, "/set");
     MQTTclient.subscribe(topic4);
 
@@ -862,20 +820,6 @@ void callback(char *topic, byte *payload, unsigned int length)
     }
     doc.clear();
   }
-  /*
-    if (strcmp(command[0], TopicDots) == 0 && strcmp(command[1], "set") == 0)
-    {
-      JsonDocument doc;
-      deserializeJson(doc, payload, length);
-
-      if (doc["state"].is<const char *>())
-      {
-        MqttCommandDots = strcmp(doc["state"], MQTT_STATE_ON) == 0;
-        MqttCommandDotsReceived = true;
-      }
-      doc.clear();
-    }
-  */
 
   if (strcmp(command[0], TopicDotsBrightness) == 0 && strcmp(command[1], "set") == 0)
   {
@@ -884,7 +828,7 @@ void callback(char *topic, byte *payload, unsigned int length)
 
     if (doc["state"].is<float>())
     {
-      ConfigDotsBrightness = doc["state"];
+      ConfigDotsBrightness = map(doc["state"].as<long>(), 0, 100, 0, 255); // convert 0..100 % to 0..255
       MqttCommandDotsBrightnessReceived = true;
     }
     doc.clear();
