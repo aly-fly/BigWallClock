@@ -88,12 +88,35 @@ String MqttStatusErrorTextLastSent = "xyz";
 
 // ===========================================================
 
-/*
-double round1(double value)
+bool MqttPublish(const char *Topic, const char *Message, const bool Retain)
 {
-  return (int)(value * 10 + 0.5) / 10.0;
+  bool ok = MQTTclient.publish(Topic, Message, Retain);
+
+#ifdef DEBUG_OUTPUT
+  if (ok)
+  {
+    Serial.print("TX MQTT: ");
+    Serial.print(Topic);
+    Serial.print(" - ");
+    Serial.println(Message);
+  }
+  else
+  {
+    Serial.print("TX MQTT ERROR: ");
+    Serial.println(Topic);
+  }
+#endif
+  return ok;
 }
-*/
+
+bool MqttPublish(const char *Topic, JsonDocument *Json, const bool Retain)
+{
+  char buffer[256];
+  serializeJson(*Json, buffer);
+  bool ok = MqttPublish(Topic, buffer, Retain);
+  Json->clear();
+  return ok;
+}
 
 void MqttPublishValues(bool forceUpdateEverything)
 {
@@ -117,14 +140,8 @@ void MqttPublishValues(bool forceUpdateEverything)
     // send availability message
     if (forceUpdateEverything || !availabilityReported)
     {
-      const char *topic = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
-      if (!MQTTclient.publish(topic, MQTT_ALIVE_MSG_ONLINE, MQTT_RETAIN_ALIVE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC), MQTT_ALIVE_MSG_ONLINE, MQTT_RETAIN_ALIVE_MESSAGES))
         return;
-      availabilityReported = true;
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(MQTT_ALIVE_MSG_ONLINE);
     }
 
     if (forceUpdateEverything ||
@@ -137,20 +154,11 @@ void MqttPublishValues(bool forceUpdateEverything)
       state["brightness"] = ConfigBgBrightness;
       state["effect"] = ConfigBgEffectStr;
 
-      char buffer[256];
-      serializeJson(state, buffer);
-      const char *topic = concat3(MQTT_CLIENT, "/", TopicLight);
-      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicLight), &state, MQTT_RETAIN_STATE_MESSAGES))
         return;
       MqttStatusPowerLastSent = ConfigBgPower;
       MqttStatusBrightnessLastSent = ConfigBgBrightness;
       MqttStatusEffectLastSent = ConfigBgEffectStr;
-
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(buffer);
-      state.clear();
     }
 
     if (forceUpdateEverything || (abs(ConfigRainbowSec - MqttStatusRainbowSecLastSent) > 0.2))
@@ -158,18 +166,9 @@ void MqttPublishValues(bool forceUpdateEverything)
       JsonDocument state;
       state["state"] = ConfigRainbowSec;
 
-      char buffer[256];
-      serializeJson(state, buffer);
-      const char *topic = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
-      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicRainbowSec), &state, MQTT_RETAIN_STATE_MESSAGES))
         return;
       MqttStatusRainbowSecLastSent = ConfigRainbowSec;
-
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(buffer);
-      state.clear();
     }
 
     if (forceUpdateEverything || ConfigDotsBrightness != MqttStatusDotsBrightnessLastSent)
@@ -177,18 +176,9 @@ void MqttPublishValues(bool forceUpdateEverything)
       JsonDocument state;
       state["state"] = map(ConfigDotsBrightness, 0, 255, 0, 100); // convert 0..255 to 0..100 %
 
-      char buffer[256];
-      serializeJson(state, buffer);
-      const char *topic = concat3(MQTT_CLIENT, "/", TopicDotsBrightness);
-      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicDotsBrightness), &state, MQTT_RETAIN_STATE_MESSAGES))
         return;
       MqttStatusDotsBrightnessLastSent = ConfigDotsBrightness;
-
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(buffer);
-      state.clear();
     }
 
     if (forceUpdateEverything || (abs(MqttStatusRssi - MqttStatusRssiLastSent) > 6))
@@ -196,18 +186,9 @@ void MqttPublishValues(bool forceUpdateEverything)
       JsonDocument state;
       state["state"] = MqttStatusRssi;
 
-      char buffer[256];
-      serializeJson(state, buffer);
-      const char *topic = concat3(MQTT_CLIENT, "/", TopicRssi);
-      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicRssi), &state, MQTT_RETAIN_STATE_MESSAGES))
         return;
       MqttStatusRssiLastSent = MqttStatusRssi;
-
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(buffer);
-      state.clear();
     }
 
     if (forceUpdateEverything || (abs(MqttStatusTemperture - MqttStatusTempertureLastSent) > 1))
@@ -215,18 +196,9 @@ void MqttPublishValues(bool forceUpdateEverything)
       JsonDocument state;
       state["state"] = MqttStatusTemperture;
 
-      char buffer[256];
-      serializeJson(state, buffer);
-      const char *topic = concat3(MQTT_CLIENT, "/", TopicTemperature);
-      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicTemperature), &state, MQTT_RETAIN_STATE_MESSAGES))
         return;
       MqttStatusTempertureLastSent = MqttStatusTemperture;
-
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(buffer);
-      state.clear();
     }
 
     if (forceUpdateEverything || MqttStatusErrorCounter != MqttStatusErrorCounterLastSent)
@@ -234,18 +206,9 @@ void MqttPublishValues(bool forceUpdateEverything)
       JsonDocument state;
       state["state"] = (float)MqttStatusErrorCounter;
 
-      char buffer[256];
-      serializeJson(state, buffer);
-      const char *topic = concat3(MQTT_CLIENT, "/", TopicErrorWarning);
-      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicErrorWarning), &state, MQTT_RETAIN_STATE_MESSAGES))
         return;
       MqttStatusErrorCounterLastSent = MqttStatusErrorCounter;
-
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(buffer);
-      state.clear();
     }
 
     if (forceUpdateEverything || MqttStatusErrorText != MqttStatusErrorTextLastSent)
@@ -253,18 +216,9 @@ void MqttPublishValues(bool forceUpdateEverything)
       JsonDocument state;
       state["state"] = MqttStatusErrorText;
 
-      char buffer[256];
-      serializeJson(state, buffer);
-      const char *topic = concat3(MQTT_CLIENT, "/", TopicErrorText);
-      if (!MQTTclient.publish(topic, buffer, MQTT_RETAIN_STATE_MESSAGES))
+      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicErrorText), &state, MQTT_RETAIN_STATE_MESSAGES))
         return;
       MqttStatusErrorTextLastSent = MqttStatusErrorText;
-
-      Serial.print("TX MQTT: ");
-      Serial.print(topic);
-      Serial.print(" ");
-      Serial.println(buffer);
-      state.clear();
     }
   }
 }
@@ -291,11 +245,13 @@ void MqttPeriodicReportBackEverything()
 bool MqttReportDiscovery()
 {
 #ifdef MQTT_HOME_ASSISTANT_DISCOVERY
-  char json_buffer[2048];
   JsonDocument discovery;
+
+  Log("Sending MQTT HA Discovery messages...");
 
   // Back Light - LIGHT
   // https://www.home-assistant.io/integrations/light.mqtt/
+  discovery.clear();
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -322,18 +278,13 @@ bool MqttReportDiscovery()
   {
     discovery["effect_list"][i] = EffectList[i];
   }
-  serializeJson(discovery, json_buffer);
-  const char *topic1 = concat5("homeassistant/light/", MQTT_CLIENT, "_", TopicLight, "/light/config");
+
   delay(250);
-  if (!MQTTclient.publish(topic1, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
+  if (!MqttPublish(concat5("homeassistant/light/", MQTT_CLIENT, "_", TopicLight, "/light/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
     return false;
-  Serial.print("TX MQTT: ");
-  Serial.print(topic1);
-  Serial.print(" ");
-  Serial.println(json_buffer);
-  discovery.clear();
 
   // Rainbow duration - NUMBER
+  discovery.clear();
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -359,19 +310,14 @@ bool MqttReportDiscovery()
   discovery["max"] = 60;
   discovery["mode"] = "slider";
   discovery["value_template"] = "{{ value_json.state }}";
-  serializeJson(discovery, json_buffer);
-  const char *topic2 = concat5("homeassistant/number/", MQTT_CLIENT, "_", TopicRainbowSec, "/number/config");
+
   delay(250);
-  if (!MQTTclient.publish(topic2, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
+  if (!MqttPublish(concat5("homeassistant/number/", MQTT_CLIENT, "_", TopicRainbowSec, "/number/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
     return false;
-  Serial.print("TX MQTT: ");
-  Serial.print(topic2);
-  Serial.print(" ");
-  Serial.println(json_buffer);
-  discovery.clear();
 
   // Dots brightness - NUMBER
   // https://www.home-assistant.io/integrations/number.mqtt/
+  discovery.clear();
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -397,19 +343,14 @@ bool MqttReportDiscovery()
   discovery["max"] = 100;
   discovery["mode"] = "slider";
   discovery["value_template"] = "{{ value_json.state }}";
-  serializeJson(discovery, json_buffer);
-  const char *topic3a = concat5("homeassistant/number/", MQTT_CLIENT, "_", TopicDotsBrightness, "/number/config");
+
   delay(250);
-  if (!MQTTclient.publish(topic3a, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
+  if (!MqttPublish(concat5("homeassistant/number/", MQTT_CLIENT, "_", TopicDotsBrightness, "/number/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
     return false;
-  Serial.print("TX MQTT: ");
-  Serial.print(topic3a);
-  Serial.print(" ");
-  Serial.println(json_buffer);
-  discovery.clear();
 
   // rssi - SENSOR
   // https://www.home-assistant.io/integrations/sensor.mqtt/
+  discovery.clear();
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -430,18 +371,13 @@ bool MqttReportDiscovery()
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicRssi);
   discovery["value_template"] = "{{ value_json.state }}";
   discovery["unit_of_measurement"] = "dBm";
-  serializeJson(discovery, json_buffer);
-  const char *topic4 = concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicRssi, "/sensor/config");
+
   delay(250);
-  if (!MQTTclient.publish(topic4, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
+  if (!MqttPublish(concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicRssi, "/sensor/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
     return false;
-  Serial.print("TX MQTT: ");
-  Serial.print(topic4);
-  Serial.print(" ");
-  Serial.println(json_buffer);
-  discovery.clear();
 
   // temperature - SENSOR
+  discovery.clear();
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -462,18 +398,13 @@ bool MqttReportDiscovery()
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicTemperature);
   discovery["value_template"] = "{{ value_json.state }}";
   discovery["unit_of_measurement"] = "deg C";
-  serializeJson(discovery, json_buffer);
-  const char *topic5 = concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicTemperature, "/sensor/config");
+
   delay(250);
-  if (!MQTTclient.publish(topic5, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
+  if (!MqttPublish(concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicTemperature, "/sensor/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
     return false;
-  Serial.print("TX MQTT: ");
-  Serial.print(topic5);
-  Serial.print(" ");
-  Serial.println(json_buffer);
-  discovery.clear();
 
   // error counter - SENSOR
+  discovery.clear();
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -493,19 +424,14 @@ bool MqttReportDiscovery()
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorWarning);
   discovery["value_template"] = "{{ value_json.state }}";
   discovery["unit_of_measurement"] = "cnt";
-  serializeJson(discovery, json_buffer);
-  const char *topic6 = concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicErrorWarning, "/sensor/config");
+
   delay(250);
-  if (!MQTTclient.publish(topic6, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
+  if (!MqttPublish(concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicErrorWarning, "/sensor/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
     return false;
-  Serial.print("TX MQTT: ");
-  Serial.print(topic6);
-  Serial.print(" ");
-  Serial.println(json_buffer);
-  discovery.clear();
 
   // error text - SENSOR
   // https://www.home-assistant.io/integrations/sensor.mqtt/
+  discovery.clear();
   discovery["device"]["identifiers"][0] = MQTT_CLIENT;
   discovery["device"]["manufacturer"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MANUFACTURER;
   discovery["device"]["model"] = MQTT_HOME_ASSISTANT_DISCOVERY_DEVICE_MODEL;
@@ -524,18 +450,12 @@ bool MqttReportDiscovery()
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorText);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicErrorText);
   discovery["value_template"] = "{{ value_json.state }}";
-  //discovery["unit_of_measurement"] = "...";
-  serializeJson(discovery, json_buffer);
-  const char *topic7 = concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicErrorText, "/sensor/config");
-  delay(250);
-  if (!MQTTclient.publish(topic7, json_buffer, MQTT_RETAIN_DISCOVERY_MESSAGES))
-    return false;
-  Serial.print("TX MQTT: ");
-  Serial.print(topic7);
-  Serial.print(" ");
-  Serial.println(json_buffer);
-  discovery.clear();
 
+  delay(250);
+  if (!MqttPublish(concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicErrorText, "/sensor/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
+    return false;
+
+  Log("Sending Discovery done.");
 #endif
   return true;
 }
@@ -669,7 +589,7 @@ bool MqttStart(bool restart)
                            MQTT_PASSWORD,
                            concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC), // LWT topic
                            0,                                           // LWT QoS
-                           MQTT_RETAIN_ALIVE_MESSAGES,                  // retain
+                           MQTT_RETAIN_ALIVE_MESSAGES,                  // LWT retain
                            MQTT_ALIVE_MSG_OFFLINE))                     // LWT message to be sent by the Broker when device goes offline
     {
       Serial.println("MQTT connected");
@@ -680,14 +600,11 @@ bool MqttStart(bool restart)
       return false; // do not continue if not connected
     } // connect failed
 
-    const char *topic1 = concat4(MQTT_CLIENT, "/", TopicLight, "/set");
-    MQTTclient.subscribe(topic1);
+    MQTTclient.subscribe(concat4(MQTT_CLIENT, "/", TopicLight, "/set"));
 
-    const char *topic2 = concat4(MQTT_CLIENT, "/", TopicRainbowSec, "/set");
-    MQTTclient.subscribe(topic2);
+    MQTTclient.subscribe(concat4(MQTT_CLIENT, "/", TopicRainbowSec, "/set"));
 
-    const char *topic4 = concat4(MQTT_CLIENT, "/", TopicDotsBrightness, "/set");
-    MQTTclient.subscribe(topic4);
+    MQTTclient.subscribe(concat4(MQTT_CLIENT, "/", TopicDotsBrightness, "/set"));
 
     // Home Assistant sends "online" and "offline" to "homeassistant/status" when being shut down or restarted.
     MQTTclient.subscribe(TopicHAstatus);
