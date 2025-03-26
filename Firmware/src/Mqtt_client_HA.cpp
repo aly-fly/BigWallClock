@@ -3,6 +3,7 @@
 #include "Logger.h"
 #include "Version.h"
 #include "GlobalVariables.h"
+#include "utils.h"
 #include "Mqtt_client_HA.h"
 
 #ifdef MQTT_ENABLED
@@ -35,12 +36,10 @@ PubSubClient MQTTclient(espClient);
 
 int splitCommand(char *topic, char *tokens[], int tokensNumber);
 void callback(char *topic, byte *payload, unsigned int length);
+void MqttReportDiscovery(void);
 
-void MqttReportBackOnChange();
-bool MqttReportDiscovery();
-
-uint32_t lastTimeSent = (uint32_t)(MQTT_REPORT_STATUS_EVERY_SEC * -1000);
-uint32_t LastTimeTriedToConnect = 0;
+unsigned long lastTimeSent = ULONG_MAX - (MQTT_REPORT_STATUS_EVERY_SEC * 1001);      // execute on the first call
+unsigned long LastTimeTriedToConnect = ULONG_MAX - (MQTT_RECONNECT_WAIT_SEC * 1001); // make sure it is executed on the first call
 bool discoveryReported = false;
 bool availabilityReported = false;
 
@@ -90,6 +89,9 @@ String MqttStatusErrorTextLastSent = "xyz";
 
 bool MqttPublish(const char *Topic, const char *Message, const bool Retain)
 {
+  if (!MQTTclient.connected())
+    return false;
+
   bool ok = MQTTclient.publish(Topic, Message, Retain);
 
 #ifdef DEBUG_OUTPUT
@@ -120,120 +122,91 @@ bool MqttPublish(const char *Topic, JsonDocument *Json, const bool Retain)
 
 void MqttPublishValues(bool forceUpdateEverything)
 {
-  if (MQTTclient.connected())
+  if (!MQTTclient.connected())
+    return;
+
+  // send availability message
+  if (forceUpdateEverything || !availabilityReported)
   {
-#ifdef MQTT_HOME_ASSISTANT_DISCOVERY
-    if (!discoveryReported)
-    {
-      if (MqttReportDiscovery())
-        discoveryReported = true;
-      else
-      {
-        Log("Error sending discovery!");
-        delay(2000);
-      }
-      // after discovery is sent, all values must be updated.
-      forceUpdateEverything = true;
-    }
-#endif
-
-    // send availability message
-    if (forceUpdateEverything || !availabilityReported)
-    {
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC), MQTT_ALIVE_MSG_ONLINE, MQTT_RETAIN_ALIVE_MESSAGES))
-        return;
-    }
-
-    if (forceUpdateEverything ||
-        ConfigBgPower != MqttStatusPowerLastSent ||
-        ConfigBgBrightness != MqttStatusBrightnessLastSent ||
-        ConfigBgEffectStr != MqttStatusEffectLastSent)
-    {
-      JsonDocument state;
-      state["state"] = ConfigBgPower == 0 ? MQTT_STATE_OFF : MQTT_STATE_ON;
-      state["brightness"] = ConfigBgBrightness;
-      state["effect"] = ConfigBgEffectStr;
-
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicLight), &state, MQTT_RETAIN_STATE_MESSAGES))
-        return;
-      MqttStatusPowerLastSent = ConfigBgPower;
-      MqttStatusBrightnessLastSent = ConfigBgBrightness;
-      MqttStatusEffectLastSent = ConfigBgEffectStr;
-    }
-
-    if (forceUpdateEverything || (abs(ConfigRainbowSec - MqttStatusRainbowSecLastSent) > 0.2))
-    {
-      JsonDocument state;
-      state["state"] = ConfigRainbowSec;
-
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicRainbowSec), &state, MQTT_RETAIN_STATE_MESSAGES))
-        return;
-      MqttStatusRainbowSecLastSent = ConfigRainbowSec;
-    }
-
-    if (forceUpdateEverything || ConfigDotsBrightness != MqttStatusDotsBrightnessLastSent)
-    {
-      JsonDocument state;
-      state["state"] = map(ConfigDotsBrightness, 0, 255, 0, 100); // convert 0..255 to 0..100 %
-
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicDotsBrightness), &state, MQTT_RETAIN_STATE_MESSAGES))
-        return;
-      MqttStatusDotsBrightnessLastSent = ConfigDotsBrightness;
-    }
-
-    if (forceUpdateEverything || (abs(MqttStatusRssi - MqttStatusRssiLastSent) > 6))
-    {
-      JsonDocument state;
-      state["state"] = MqttStatusRssi;
-
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicRssi), &state, MQTT_RETAIN_STATE_MESSAGES))
-        return;
-      MqttStatusRssiLastSent = MqttStatusRssi;
-    }
-
-    if (forceUpdateEverything || (abs(MqttStatusTemperture - MqttStatusTempertureLastSent) > 1))
-    {
-      JsonDocument state;
-      state["state"] = MqttStatusTemperture;
-
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicTemperature), &state, MQTT_RETAIN_STATE_MESSAGES))
-        return;
-      MqttStatusTempertureLastSent = MqttStatusTemperture;
-    }
-
-    if (forceUpdateEverything || MqttStatusErrorCounter != MqttStatusErrorCounterLastSent)
-    {
-      JsonDocument state;
-      state["state"] = (float)MqttStatusErrorCounter;
-
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicErrorWarning), &state, MQTT_RETAIN_STATE_MESSAGES))
-        return;
-      MqttStatusErrorCounterLastSent = MqttStatusErrorCounter;
-    }
-
-    if (forceUpdateEverything || MqttStatusErrorText != MqttStatusErrorTextLastSent)
-    {
-      JsonDocument state;
-      state["state"] = MqttStatusErrorText;
-
-      if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicErrorText), &state, MQTT_RETAIN_STATE_MESSAGES))
-        return;
-      MqttStatusErrorTextLastSent = MqttStatusErrorText;
-    }
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC), MQTT_ALIVE_MSG_ONLINE, MQTT_RETAIN_ALIVE_MESSAGES))
+      return;
   }
-}
 
-void MqttReportBackOnChange()
-{
-  MqttPublishValues(false);
-}
-
-void MqttPeriodicReportBackEverything()
-{
-  if (((millis() - lastTimeSent) > (MQTT_REPORT_STATUS_EVERY_SEC * 1000)) && MQTTclient.connected())
+  if (forceUpdateEverything ||
+      ConfigBgPower != MqttStatusPowerLastSent ||
+      ConfigBgBrightness != MqttStatusBrightnessLastSent ||
+      ConfigBgEffectStr != MqttStatusEffectLastSent)
   {
-    MqttPublishValues(true);
-    lastTimeSent = millis();
+    JsonDocument state;
+    state["state"] = ConfigBgPower == 0 ? MQTT_STATE_OFF : MQTT_STATE_ON;
+    state["brightness"] = ConfigBgBrightness;
+    state["effect"] = ConfigBgEffectStr;
+
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicLight), &state, MQTT_RETAIN_STATE_MESSAGES))
+      return;
+    MqttStatusPowerLastSent = ConfigBgPower;
+    MqttStatusBrightnessLastSent = ConfigBgBrightness;
+    MqttStatusEffectLastSent = ConfigBgEffectStr;
+  }
+
+  if (forceUpdateEverything || (abs(ConfigRainbowSec - MqttStatusRainbowSecLastSent) > 0.2))
+  {
+    JsonDocument state;
+    state["state"] = ConfigRainbowSec;
+
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicRainbowSec), &state, MQTT_RETAIN_STATE_MESSAGES))
+      return;
+    MqttStatusRainbowSecLastSent = ConfigRainbowSec;
+  }
+
+  if (forceUpdateEverything || ConfigDotsBrightness != MqttStatusDotsBrightnessLastSent)
+  {
+    JsonDocument state;
+    state["state"] = map(ConfigDotsBrightness, 0, 255, 0, 100); // convert 0..255 to 0..100 %
+
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicDotsBrightness), &state, MQTT_RETAIN_STATE_MESSAGES))
+      return;
+    MqttStatusDotsBrightnessLastSent = ConfigDotsBrightness;
+  }
+
+  if (forceUpdateEverything || (abs(MqttStatusRssi - MqttStatusRssiLastSent) > 6))
+  {
+    JsonDocument state;
+    state["state"] = MqttStatusRssi;
+
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicRssi), &state, MQTT_RETAIN_STATE_MESSAGES))
+      return;
+    MqttStatusRssiLastSent = MqttStatusRssi;
+  }
+
+  if (forceUpdateEverything || (abs(MqttStatusTemperture - MqttStatusTempertureLastSent) > 1))
+  {
+    JsonDocument state;
+    state["state"] = MqttStatusTemperture;
+
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicTemperature), &state, MQTT_RETAIN_STATE_MESSAGES))
+      return;
+    MqttStatusTempertureLastSent = MqttStatusTemperture;
+  }
+
+  if (forceUpdateEverything || MqttStatusErrorCounter != MqttStatusErrorCounterLastSent)
+  {
+    JsonDocument state;
+    state["state"] = (float)MqttStatusErrorCounter;
+
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicErrorWarning), &state, MQTT_RETAIN_STATE_MESSAGES))
+      return;
+    MqttStatusErrorCounterLastSent = MqttStatusErrorCounter;
+  }
+
+  if (forceUpdateEverything || MqttStatusErrorText != MqttStatusErrorTextLastSent)
+  {
+    JsonDocument state;
+    state["state"] = MqttStatusErrorText;
+
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicErrorText), &state, MQTT_RETAIN_STATE_MESSAGES))
+      return;
+    MqttStatusErrorTextLastSent = MqttStatusErrorText;
   }
 }
 
@@ -242,7 +215,7 @@ void MqttPeriodicReportBackEverything()
 // https://www.home-assistant.io/integrations/mqtt/#configuration-via-mqtt-discovery
 // To avoid high IO loads on the MQTT broker, adding some random delay in sending the discovery payload is recommended.
 
-bool MqttReportDiscovery()
+bool MqttPublishDiscoveryMessages()
 {
 #ifdef MQTT_HOME_ASSISTANT_DISCOVERY
   JsonDocument discovery;
@@ -561,9 +534,8 @@ void printMQTTconnectionStatus(void)
 bool MqttStart(bool restart)
 {
 #ifdef MQTT_ENABLED
-  if (((millis() - LastTimeTriedToConnect) > (MQTT_RECONNECT_WAIT_SEC * 1000)) || (LastTimeTriedToConnect == 0))
+  if (HasTimeElapsed(&LastTimeTriedToConnect, MQTT_RECONNECT_WAIT_SEC * 1000))
   {
-    LastTimeTriedToConnect = millis();
     if (restart)
     {
       printMQTTconnectionStatus();
@@ -608,6 +580,8 @@ bool MqttStart(bool restart)
 
     // Home Assistant sends "online" and "offline" to "homeassistant/status" when being shut down or restarted.
     MQTTclient.subscribe(TopicHAstatus);
+
+    MqttReportDiscovery();
   }
 #endif
   return true;
@@ -752,6 +726,39 @@ void callback(char *topic, byte *payload, unsigned int length)
   }
 }
 
+void MqttReportDiscovery(void)
+{
+#ifdef MQTT_HOME_ASSISTANT_DISCOVERY
+  if (!discoveryReported)
+  {
+    if (MqttPublishDiscoveryMessages())
+    {
+      discoveryReported = true;
+      // after discovery is sent, all values must be updated.
+      lastTimeSent = (unsigned long) (millis() - (MQTT_REPORT_STATUS_EVERY_SEC * 1001)); // execute on the first call to send Periodic messages
+    }
+    else
+    {
+      Log("Error sending discovery!");
+      delay(2000);
+    }
+  }
+#endif
+}
+
+void MqttReportBackOnChange()
+{
+  MqttPublishValues(false);
+}
+
+void MqttPeriodicReportBackEverything()
+{
+  if (HasTimeElapsed(&lastTimeSent, MQTT_REPORT_STATUS_EVERY_SEC * 1000))
+  {
+    MqttPublishValues(true);
+  }
+}
+
 void MqttLoopFrequently()
 {
 #ifdef MQTT_ENABLED
@@ -763,6 +770,7 @@ void MqttLoopFrequently()
 void MqttLoopInFreeTime()
 {
 #ifdef MQTT_ENABLED
+  MqttReportDiscovery();
   MqttPeriodicReportBackEverything();
   MqttReportBackOnChange();
 #endif

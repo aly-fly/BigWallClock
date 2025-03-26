@@ -393,6 +393,9 @@ uint8_t gammaCorrection(uint8_t brightness)
   return (uint8_t)round(calc);
 }
 
+// custom gamma - create a look-uptable
+// (int)(pow((float)i / (float)max_in, gamma) * max_out + 0.5));
+
 //==========================================================================================================
 
 // rainbow functions
@@ -472,9 +475,9 @@ void rainbowPattern(uint16_t width, float duration_sec, uint8_t brightness)
 {
   const float phase_per_pixel = (max_phase / NR_OF_LEDS) / width;
 
-  // Rainbow roatation speed now configurable
+  // Rainbow roatation speed is configurable
   float duration = duration_sec * 1000;
-  float phase = (float(millis() % (int)duration) / duration * max_phase);
+  float phase = (float(millis() % (unsigned int)duration) / duration * max_phase);
 
   for (uint8_t pixel = 0; pixel < NR_OF_LEDS; pixel++)
   {
