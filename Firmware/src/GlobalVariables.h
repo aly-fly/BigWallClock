@@ -16,7 +16,7 @@ extern uint8_t  ConfigBgBrightness;
 extern String   ConfigBgEffectStr;
 extern int      ConfigBgEffectNumber;
 extern uint32_t ConfigBgColor;
-extern float    ConfigRainbowSec;
+extern float    ConfigEffectDuration;
 extern uint8_t  ConfigDotsBrightness;
 
 

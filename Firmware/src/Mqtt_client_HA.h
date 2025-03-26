@@ -9,6 +9,7 @@ extern bool MqttConnected;
 
 // functions
 bool MqttStart(bool restart = false);
+void MqttStop(void);
 void MqttLoopFrequently();
 void MqttLoopInFreeTime();
 
@@ -17,11 +18,11 @@ void MqttLoopInFreeTime();
 // commands from server; states to be returned; last value that was sent
 extern bool MqttCommandPowerReceived;
 extern bool MqttCommandBrightnessReceived;
-#define NumEffects  4
+#define NumEffects  6
 extern const String EffectList[NumEffects];
 extern bool MqttCommandEffectReceived;
 extern bool MqttCommandColorReceived;
-extern bool MqttCommandRainbowSecReceived;
+extern bool MqttCommandEffectDurationReceived;
 //extern bool MqttCommandDotsReceived;
 extern bool MqttCommandDotsBrightnessReceived;
 

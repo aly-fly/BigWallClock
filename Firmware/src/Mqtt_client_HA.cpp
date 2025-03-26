@@ -56,13 +56,13 @@ uint8_t MqttStatusBrightnessLastSent = 0;
 bool MqttCommandEffectReceived = false;
 String MqttStatusEffectLastSent = "";
 const String EffectList[NumEffects] =
-    {"Static color", "Uniform rainbow", "Travelling full rainbow", "Travelling partial rainbow"};
+    {"Static color", "Uniform rainbow", "Rainbow", "Partial rainbow", "Twinkle fade", "TEST"};
 
 bool MqttCommandColorReceived = false;
 
-#define TopicRainbowSec "rainbow"
-bool MqttCommandRainbowSecReceived = false;
-float MqttStatusRainbowSecLastSent = 0;
+#define TopicEffectDuration "effect_duration"
+bool MqttCommandEffectDurationReceived = false;
+float MqttStatusEffectDurationLastSent = 0;
 
 #define TopicDotsBrightness "dots_brightness"
 bool MqttCommandDotsBrightnessReceived = false;
@@ -113,7 +113,7 @@ bool MqttPublish(const char *Topic, const char *Message, const bool Retain)
 
 bool MqttPublish(const char *Topic, JsonDocument *Json, const bool Retain)
 {
-  char buffer[256];
+  char buffer[2048];
   serializeJson(*Json, buffer);
   bool ok = MqttPublish(Topic, buffer, Retain);
   Json->clear();
@@ -130,6 +130,7 @@ void MqttPublishValues(bool forceUpdateEverything)
   {
     if (!MqttPublish(concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC), MQTT_ALIVE_MSG_ONLINE, MQTT_RETAIN_ALIVE_MESSAGES))
       return;
+    availabilityReported = true;
   }
 
   if (forceUpdateEverything ||
@@ -149,14 +150,14 @@ void MqttPublishValues(bool forceUpdateEverything)
     MqttStatusEffectLastSent = ConfigBgEffectStr;
   }
 
-  if (forceUpdateEverything || (abs(ConfigRainbowSec - MqttStatusRainbowSecLastSent) > 0.2))
+  if (forceUpdateEverything || (abs(ConfigEffectDuration - MqttStatusEffectDurationLastSent) > 0.2))
   {
     JsonDocument state;
-    state["state"] = ConfigRainbowSec;
+    state["state"] = ConfigEffectDuration;
 
-    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicRainbowSec), &state, MQTT_RETAIN_STATE_MESSAGES))
+    if (!MqttPublish(concat3(MQTT_CLIENT, "/", TopicEffectDuration), &state, MQTT_RETAIN_STATE_MESSAGES))
       return;
-    MqttStatusRainbowSecLastSent = ConfigRainbowSec;
+    MqttStatusEffectDurationLastSent = ConfigEffectDuration;
   }
 
   if (forceUpdateEverything || ConfigDotsBrightness != MqttStatusDotsBrightnessLastSent)
@@ -266,17 +267,17 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["hw_version"] = MQTT_HOME_ASSISTANT_DISCOVERY_HW_VERSION;
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
-  discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicRainbowSec);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicRainbowSec);
+  discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicEffectDuration);
+  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicEffectDuration);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
-  discovery["name"] = "Rainbow, sec";
+  discovery["name"] = "Effect duration";
   discovery["icon"] = "mdi:play-speed";
   discovery["schema"] = "json";
   discovery["platform"] = "number";
   discovery["unit_of_measurement"] = "sec";
-  discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
-  discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicRainbowSec);
-  discovery["command_topic"] = concat4(MQTT_CLIENT, "/", TopicRainbowSec, "/set");
+  discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicEffectDuration);
+  discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicEffectDuration);
+  discovery["command_topic"] = concat4(MQTT_CLIENT, "/", TopicEffectDuration, "/set");
   discovery["command_template"] = "{\"state\":{{value}}}";
   discovery["step"] = 1;
   discovery["min"] = 1;
@@ -285,7 +286,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["value_template"] = "{{ value_json.state }}";
 
   delay(250);
-  if (!MqttPublish(concat5("homeassistant/number/", MQTT_CLIENT, "_", TopicRainbowSec, "/number/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
+  if (!MqttPublish(concat5("homeassistant/number/", MQTT_CLIENT, "_", TopicEffectDuration, "/number/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
     return false;
 
   // Dots brightness - NUMBER
@@ -574,7 +575,7 @@ bool MqttStart(bool restart)
 
     MQTTclient.subscribe(concat4(MQTT_CLIENT, "/", TopicLight, "/set"));
 
-    MQTTclient.subscribe(concat4(MQTT_CLIENT, "/", TopicRainbowSec, "/set"));
+    MQTTclient.subscribe(concat4(MQTT_CLIENT, "/", TopicEffectDuration, "/set"));
 
     MQTTclient.subscribe(concat4(MQTT_CLIENT, "/", TopicDotsBrightness, "/set"));
 
@@ -585,6 +586,15 @@ bool MqttStart(bool restart)
   }
 #endif
   return true;
+}
+
+void MqttStop(void)
+{
+#ifdef MQTT_ENABLED
+  MqttPublish(concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC), MQTT_ALIVE_MSG_OFFLINE, MQTT_RETAIN_ALIVE_MESSAGES);
+  delay(100);
+  MQTTclient.disconnect();
+#endif
 }
 
 int splitCommand(char *topic, char *tokens[], int tokensNumber)
@@ -699,15 +709,15 @@ void callback(char *topic, byte *payload, unsigned int length)
     doc.clear();
   }
 
-  if (strcmp(command[0], TopicRainbowSec) == 0 && strcmp(command[1], "set") == 0)
+  if (strcmp(command[0], TopicEffectDuration) == 0 && strcmp(command[1], "set") == 0)
   {
     JsonDocument doc;
     deserializeJson(doc, payload, length);
 
     if (doc["state"].is<float>())
     {
-      ConfigRainbowSec = doc["state"];
-      MqttCommandRainbowSecReceived = true;
+      ConfigEffectDuration = doc["state"];
+      MqttCommandEffectDurationReceived = true;
     }
     doc.clear();
   }
@@ -735,7 +745,7 @@ void MqttReportDiscovery(void)
     {
       discoveryReported = true;
       // after discovery is sent, all values must be updated.
-      lastTimeSent = (unsigned long) (millis() - (MQTT_REPORT_STATUS_EVERY_SEC * 1001)); // execute on the first call to send Periodic messages
+      lastTimeSent = (unsigned long)(millis() - (MQTT_REPORT_STATUS_EVERY_SEC * 1001)); // execute on the first call to send Periodic messages
     }
     else
     {

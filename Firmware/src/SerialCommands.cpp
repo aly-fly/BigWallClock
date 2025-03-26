@@ -14,6 +14,7 @@
 #include "ResetReason.h"
 #include "myWiFi.h"
 #include "LEDs.h"
+#include "Mqtt_client_HA.h"
 
 String sSerialCmd;
 
@@ -187,6 +188,7 @@ void ReceiveAndProcessSerialCommands(void)
                 Log("-> Reboot!");
                 EnableMotor(false);
                 LED_allSameColor(clORANGEbright, true);
+                MqttStop();
                 delay(200);
                 loggerPurgeToFile(true);
                 delay(200);

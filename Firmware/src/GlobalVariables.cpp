@@ -15,6 +15,6 @@ uint8_t  ConfigBgBrightness = 127;
 String   ConfigBgEffectStr = "";
 int      ConfigBgEffectNumber = 0;
 uint32_t ConfigBgColor = 0x002233; // very dim blue-green
-float    ConfigRainbowSec = 30;
+float    ConfigEffectDuration = 30;
 uint8_t  ConfigDotsBrightness = 200;
 

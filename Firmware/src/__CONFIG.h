@@ -131,6 +131,9 @@ decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Va
 
 // ********************* LED *********************
 
+#define NR_OF_LEDS 128 // 0...127
+#define LED_OFFSET 64
+
 #define WS2812_LED_PIN      GPIO_NUM_32
 #define HOUR_DOT_COLOR      clREDbright
 #define MINUTE_DOT_COLOR    clGREENbright

@@ -480,10 +480,10 @@ void MainLoopMQTTTasks(void)
     LogNS("CMD: Effect = %d (%s)\r\n", ConfigBgEffectNumber, ConfigBgEffectStr.c_str());
     MqttCommandReceived = true;
   }
-  if (MqttCommandRainbowSecReceived)
+  if (MqttCommandEffectDurationReceived)
   {
-    MqttCommandRainbowSecReceived = false;
-    LogNS("CMD: Rainbow sec = %.1f\r\n", ConfigRainbowSec);
+    MqttCommandEffectDurationReceived = false;
+    LogNS("CMD: Rainbow sec = %.1f\r\n", ConfigEffectDuration);
     MqttCommandReceived = true;
   }
   /*
@@ -573,15 +573,26 @@ void MainLoopLEDTasks(void)
       break;
 
     case 1: // Uniform rainbow
-      rainbowPattern(8, ConfigRainbowSec, ConfigBgBrightness);
+      LED_EffectRainbow(8, ConfigEffectDuration, ConfigBgBrightness);
       break;
 
     case 2: // Travelling full rainbow
-      rainbowPattern(1, ConfigRainbowSec, ConfigBgBrightness);
+      LED_EffectRainbow(1, ConfigEffectDuration, ConfigBgBrightness);
       break;
 
-    case 3: // Travelling partial rainbow
-      rainbowPattern(3, ConfigRainbowSec, ConfigBgBrightness);
+      case 3: // Travelling partial rainbow
+      LED_EffectRainbow(3, ConfigEffectDuration, ConfigBgBrightness);
+      break;
+
+      case 4: // White sparkles over configured background
+      LEDcolor = ConfigBgColor;
+      adjustColorBrightness(&LEDcolor, ConfigBgBrightness);
+      LED_EffectTwinkleFade(LEDcolor, clWHITEbright, (uint8_t)ConfigEffectDuration);
+      //LED_EffectSparkling(LEDcolor, clWHITEbright, (uint8_t)(ConfigEffectDuration / 10));
+      break;
+
+      case 5: // 
+      LED_EffectTEST();
       break;
 
     default:

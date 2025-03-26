@@ -216,7 +216,7 @@ void adjustBrightness(uint32_t *RGB, const uint8_t brightness)
 }
 
 // width = 1 -> full rainbow at once; 3 -> one third displayed at once
-void rainbowPattern(uint16_t width, float duration_sec, uint8_t brightness)
+void LED_EffectRainbow(uint16_t width, float duration_sec, uint8_t brightness)
 {
   const float phase_per_pixel = (max_phase / NR_OF_LEDS) / width;
 

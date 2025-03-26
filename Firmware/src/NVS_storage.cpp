@@ -19,7 +19,7 @@ void storedConfigLoad(void)
     ConfigBgEffectNumber = preferences.getInt("BgEffectNum", ConfigBgEffectNumber);
     ConfigBgEffectStr = preferences.getString("BgEffectStr", ConfigBgEffectStr);
     ConfigBgColor = preferences.getUInt("BgColor", ConfigBgColor);
-    ConfigRainbowSec = preferences.getFloat("RainbowSec", ConfigRainbowSec);
+    ConfigEffectDuration = preferences.getFloat("EffectDuration", ConfigEffectDuration);
     ConfigDotsBrightness = preferences.getUChar("DotsBrightness", ConfigDotsBrightness);
 
     // Close the Preferences
@@ -36,7 +36,7 @@ void storedConfigSave(void)
     preferences.putInt("BgEffectNum", ConfigBgEffectNumber);
     preferences.putString("BgEffectStr", ConfigBgEffectStr);
     preferences.putUInt("BgColor", ConfigBgColor);
-    preferences.putFloat("RainbowSec", ConfigRainbowSec);
+    preferences.putFloat("EffectDuration", ConfigEffectDuration);
     preferences.putUChar("DotsBrightness", ConfigDotsBrightness);
 
     // Close the Preferences
