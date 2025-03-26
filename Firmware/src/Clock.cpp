@@ -48,7 +48,7 @@ void setClock(void)
     }
     */
 
-  if ((millis() < (LastTimeClockSynced + 60 * 60 * 1000)) && (LastTimeClockSynced != 0))
+  if ((millis() - LastTimeClockSynced < (60 * 60 * 1000)) && (LastTimeClockSynced != 0))
   {         // check every hour
     return; // clock is already synced
   }

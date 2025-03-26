@@ -48,6 +48,7 @@ void setup()
   Log("Project: github.com/aly-fly/BigWallClock");
   Log("Version: %s", VERSION);
   Log("Build: %s", BUILD_TIMESTAMP);
+  Serial.println(F(__FILE__ __DATE__ __TIME__));
   Log(get_reset_reason().c_str());
 
   LED_init();
@@ -171,7 +172,7 @@ void setup()
 
   LogNS("INIT FINISHED.\r\n\r\n");
   Serial.println(SERIAL_COMMANDS_LIST); // don't send to other channels
-  Log("Clock running.");
+  Log("===== Init finished. Clock running. ===== ");
 
   LEDbuiltin_OFF();
   LED_clear(false);
@@ -181,6 +182,7 @@ void setup()
 // ===============================================================================================================================================================
 
 int CurrentHour12;
+int delta;
 float speedAdjFiltered;
 bool speedFilterValid = false;
 bool ErrorCounterLogged = false;
@@ -195,20 +197,20 @@ int heartBeatLed = 0;
 
 unsigned long LastTimeClockTaskRun = 0;
 
-int LastTimeLEDTaskRun = 0; // limit refresh rate
+unsigned long LastTimeLEDTaskRun = 0; // limit refresh rate
 
 String ClockErrorText;
 
 void MainLoopClockTasks(void)
 {
-  if ((millis() - LastTimeClockTaskRun) < 100)
+  if (!HasTimeElapsed(&LastTimeClockTaskRun, 100))
     return; // run 10x per second
-  LastTimeClockTaskRun = millis();
 
   ClockErrorText = "-"; // not an empty string
 
   ClockWarning = false;
   ClockError = false;
+  delta = 0;
 
   if (GetCurrentTime())
   {
@@ -227,15 +229,18 @@ void MainLoopClockTasks(void)
           if (TestMode)
             LogNS("MT12 = %d; Hr = %d; Hr12 = %d;\r\n", EncoderPosMT12, CurrentHour, CurrentHour12);
 
-          int delta = TimeCurrent - TimeDisplayed; // positive -> move forward
+          delta = TimeCurrent - TimeDisplayed; // positive -> move forward
           // handle overflow at 0:00 and 12:00
           if (delta > CPR12half)
             delta -= CPR12;
           if (delta < -CPR12half)
             delta += CPR12;
 
-          if (abs(delta) > 1000)
+          if (abs(delta) > ((int)CPR / 60)) // more than 1 minute off
+          {
             ErrorCounter += 2;
+            // ClockErrorText.concat("OneMinDiff ");
+          }
 
           speedAdj = (float)delta / 600; // P regulator
 
@@ -262,6 +267,7 @@ void MainLoopClockTasks(void)
 
         if ((EncoderPosMT == 12) && (EncoderPosST > 100))
         {
+          LogNS("Clock is at 12:00 -> Reset MT to 0...\r\n");
           EncoderSetMT(0);
         }
         if (EncoderWarning)
@@ -293,7 +299,10 @@ void MainLoopClockTasks(void)
       speedFilterValid = false;
       if (encoderRead(false)) // print only if encoder encounters an error
         if ((EncoderPosMT == 12) && (EncoderPosST > 100))
+        {
+          LogNS("Clock is at 12:00 -> Reset MT to 0...\r\n");
           EncoderSetMT(0);
+        }
     } // clock not enabled
   } // get time
   else
@@ -313,7 +322,6 @@ void MainLoopClockTasks(void)
     // disable immediatelly
     EnableMotor(false);
     ClockEnabled = false;
-    ErrorCounter += 50;
   }
   if (motSta == MSSTALL)
   {
@@ -381,7 +389,7 @@ void MainLoopClockTasks(void)
     ErrorCounter = 0;
   if ((ErrorCounter > 20) && (!ErrorCounterLogged))
   {
-    Log("ErrorCounter increasing!");
+    Log("ErrorCounter increasing! (diff = %.2f min) ", (float)delta * 60 / CPR);
     encoderRead(true); // log position
     ErrorCounterLogged = true;
   }
@@ -407,7 +415,7 @@ void MainLoopClockTasks(void)
     ClockEnabled = true;
   }
 
-  if (ErrorCounter > 0)
+  if (ErrorCounter > 10)
     ClockWarning = true;
 
   if (ErrorCounter > 1000)
@@ -417,7 +425,11 @@ void MainLoopClockTasks(void)
     ClockWarning = true;
 
   if (ClockWarning)
-    ClockErrorText.concat("WARNING ");
+  {
+    ClockErrorText.concat("WARNING (diff = ");
+    ClockErrorText.concat(round((float)delta * 60 / CPR));
+    ClockErrorText.concat(" min) ");
+  }
   if (ClockError)
     ClockErrorText.concat("ERROR ");
 
@@ -516,9 +528,8 @@ void MainLoopLEDTasks(void)
 {
   uint32_t LEDcolor;
 
-  if ((millis() - LastTimeLEDTaskRun) < 100)
+  if (!HasTimeElapsed(&LastTimeLEDTaskRun, 100))
     return; // run 10x per second
-  LastTimeLEDTaskRun = millis();
 
   /*
   if (CurrentHour != LastHour)

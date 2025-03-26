@@ -356,3 +356,14 @@ float roundToOneDecimal(float value)
   value = value / 10;
   return value;
 }
+
+
+// millis() rolls over every 49.7 days. This is fixed here.
+bool HasTimeElapsed(unsigned long * LastTime, unsigned long Miliseconds)
+{
+  bool elapsed = ((millis() - *LastTime) > Miliseconds); // this line also handles overflows
+  if (elapsed) *LastTime = millis(); // for approximate delays in code
+//if (elapsed) *LastTime += Miliseconds; // for exact frame rate
+  return elapsed;
+}
+

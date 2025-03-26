@@ -26,4 +26,6 @@ String      utf8ascii ( const char* s ) ;                          // Convert UT
 
 float roundToOneDecimal(float value);
 
+bool HasTimeElapsed(unsigned long * LastTime, unsigned long Miliseconds);
+
 #endif

@@ -3,6 +3,7 @@
 #include "Clock.h"
 #include "fileSystem.h"
 #include "GlobalVariables.h"
+#include "utils.h"
 #include "TcpSocket.h"
 
 char int_logbuffer[150];
@@ -42,6 +43,7 @@ void int_log(void)
     SendToSocket("\r\n");
     int_logbuffer[0] = '\0';
 
+    // check if there is already lots of data waiting -> write immediatelly
     if ((CollectForSaving.length() > 1500) && FSready)
     {
         if (saveToFile(&CollectForSaving))
@@ -69,12 +71,11 @@ void LogNSc(char cc)
 
 void loggerPurgeToFile(bool immediatelly = false)
 {
-    if ((((millis() - LastTimeSaved) > 90000) && FSready && (CollectForSaving.length() > 200)) || immediatelly)
+    if ((HasTimeElapsed(&LastTimeSaved, 90000) && FSready && (CollectForSaving.length() > 200)) || immediatelly)
     {
         if (saveToFile(&CollectForSaving))
         {
             CollectForSaving.clear();
-            LastTimeSaved = millis();
         }
     }
 }
