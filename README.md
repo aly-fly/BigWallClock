@@ -64,7 +64,7 @@ Such a project can't be battery powered. A standard 24 V, 1 A, wall-plug supply 
 
 
 ## Everything mounted and tested
-![.](/Photo/mechanism back.jpg)
+![.](/Photo/mechanism_back.jpg)
 ![.](/Photo/clock_preview_back.jpg)
 
 ### And final step is HA integration
