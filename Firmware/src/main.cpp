@@ -345,7 +345,7 @@ void MainLoopClockTasks(void)
   }
   else
   {
-    MotorTemperatureFiltered = (MotorTemperatureRaw * 0.05) + (MotorTemperatureFiltered * 0.95);
+    MotorTemperatureFiltered = (MotorTemperatureRaw * 0.04) + (MotorTemperatureFiltered * 0.96);
   }
 
   MotorTemperature = roundToOneDecimal(MotorTemperatureFiltered);

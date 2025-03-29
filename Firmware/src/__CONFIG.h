@@ -118,7 +118,7 @@ decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Va
 #define TEMP_SENS_RPULLUP   10000
 #define TEMP_SENS_OFFSET    -3.0
 
-#define MOTOR_TEMP_MAX        50      // °C
+#define MOTOR_TEMP_MAX        55      // °C
 
 // ********************* Encoder *********************
 

@@ -19,9 +19,15 @@ If you don't have a relative or friend that has a woodworking shop, best next op
 
 ### Mechanism
 Clock with 1 meter diameter needs big and heavy clock hands. Standard off-the-shelf driving mechanism is not strong enough, and it also doesn't offer much challenges. 
-Having a 3D printer in my workshop and with lots of initiative to learn mechanical design, I downloaded Fusion 360 and started learning. Produced design is not optimal, but works pretty well. For the next iteration (if it ever comes up) one more gear after the motor is needed to increase the torque. Everything is printed from PLA, as it is hard enough so that gears should last quite some time. PETG was an alternative, as it has better dimensional tolerances and better endurance, but for now it was not needed.
+Having a 3D printer in my workshop and with lots of initiative to learn mechanical design, I downloaded Autodesk Fusion Personal and started learning. Produced design is not optimal, but works pretty well. For the next iteration (if it ever comes up) one more gear after the motor is needed to increase the torque. Everything is printed from PLA, as it is hard enough so that gears should last quite some time. PETG was an alternative, as it has better dimensional tolerances and better endurance, but for now it was not needed. 
+
+Images: ´3D_Design >> images´
+
+Complete 3D project (Step file): ´3D_Design >> project´
 
 ![.](/Photo/gears_1.jpg)
+
+![.](/3D_design/images/mechanism_v101_e_crossesction_small.png)
 
 ### Feedback device
 Main idea is that clock adjusts itself to the correct time, and also takes care of the Daylight Savings time changes. For this it is required to know exact position of the clock hands. As an engineer developing the rotary encoders, my first thought was which part from our portfolio would fit. [AksIM-2](https://www.rls.si/eng/aksim-2-off-axis-rotary-absolute-encoder) with 29 mm diameter was a perfect fit. With 17-bit resolution this gives more than 2000 counts between two neighboring minute marks on the clock face. A bit too much isn't it :) But this can be used to make a very smooth and precise time-keeping. As encoder has RS422 differential output, a line-driver is required to convert signals to 3.3V LVTTL for the processor.
@@ -50,12 +56,12 @@ The programming work starts here. We need something easy to use, powerful, with 
 ![.](/Photo/controller.jpg)
 
 ### Clock hands and numbers
-Everything designed in Fusion 360 and printed from PLA or PETG. 
+Everything designed in Autodesk Fusion Personal and printed from PLA or PETG. 
 
 ![.](/Photo/printer.jpg)
 
 ### LED strip
-120 LEDs is a nice number to have one pixel per minute plus one in between. 60 LEDs per meter is a good choice for nice and uniform colors. The Chinese guys [delivered again](https://www.aliexpress.com/item/1005006838558445.html).
+120 LEDs is a nice number to have one pixel per minute plus one in between. 60 LEDs per meter is a good choice for nice and uniform colors. The Chinese guys [delivered again](https://www.aliexpress.com/item/1005006838558445.html). LED strip is mounted using custom brackets, as can be seen in the folder ´3D_Design >> images´
 
 ### Power supply
 Such a project can't be battery powered. A standard 24 V, 1 A, wall-plug supply works well. 24 V is for the motor driver. 
