@@ -108,7 +108,7 @@ decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Va
 #define LOW_POWER       33
 #define OVERCURRENT_LVL  2
 #define STALL_LVL        5
-#define SPEED_LIMIT     50
+#define SPEED_LIMIT     40
 
 // ********************* Motor temp sensor *********************
 

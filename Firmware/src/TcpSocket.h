@@ -4,6 +4,7 @@
 extern bool SocketConnected;
 
 void startTcpSocket();
+void stopTcpSocket();
 void LoopSocketServer();
 void SendToSocket(String txt);
 void SendToSocket(char cc);

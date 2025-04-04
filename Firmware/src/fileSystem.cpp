@@ -30,9 +30,9 @@ bool fileSystem_init(void)
 
 void fileSystemPrintInfo(void)
 {
-  Log("FS size: %u Bytes", LittleFS.totalBytes());
-  Log("FS used: %u Bytes", LittleFS.usedBytes());
-  Log("FS available: %u Bytes", LittleFS.totalBytes() - LittleFS.usedBytes());
+  Log("FS size: %u kBytes", (unsigned int)LittleFS.totalBytes()/1024);
+  Log("FS used: %u kBytes", (unsigned int)LittleFS.usedBytes()/1024);
+  Log("FS available: %u kBytes", (unsigned int)(LittleFS.totalBytes() - LittleFS.usedBytes())/1024);
 }
 
 //==================================================================================================================

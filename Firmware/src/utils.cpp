@@ -32,13 +32,12 @@ void TrimNumDot (String& Str) {
 }
 
 void TrimAlfaNum (String& Str) {
-  bool validChar;
   Str.trim(); // remove leading and trailing spaces
   TrimNonPrintable(Str);
   for (uint16_t i = 0; i < Str.length(); i++)
   {
     char c = Str.charAt(i);
-    validChar = ((c >= '0') && (c <= '9')) ||
+    bool validChar = ((c >= '0') && (c <= '9')) ||
                 ((c >= 'A') && (c <= 'Z')) ||
                 ((c >= 'a') && (c <= 'z'));
     if (!validChar) {
@@ -51,15 +50,13 @@ void TrimAlfaNum (String& Str) {
 // remove double chars
 void TrimDoubleChars (String& Str, char cc) {
   if (Str.length() < 2) return;
-  bool Found;
   Str.trim(); // remove leading and trailing spaces
-  char c1, c2;
   unsigned int i = 0;
   unsigned int len = Str.length()-1;
   while (i < len) {
-    c1 = Str.charAt(i);
-    c2 = Str.charAt(i+1);
-    Found = ((c1 == cc) && (c2 == cc));
+    char c1 = Str.charAt(i);
+    char c2 = Str.charAt(i+1);
+    bool Found = ((c1 == cc) && (c2 == cc));
     i++;
     if (Found) {
       Str.remove(i, 1);
@@ -71,12 +68,11 @@ void TrimDoubleChars (String& Str, char cc) {
 
 void TrimDoubleSpaces (String& Str) {
   if (Str.length() < 2) return;
-  char c1, c2;
   unsigned int i = 0;
   unsigned int len = Str.length()-1;
   while (i < len) {
-    c1 = Str.charAt(i);
-    c2 = Str.charAt(i+1);
+    char c1 = Str.charAt(i);
+    char c2 = Str.charAt(i+1);
     if ((c1 == c2) && (c2 == SPACE)) {
       Str.remove(i, 1);
       len--;
@@ -91,10 +87,9 @@ bool IsUppercaseChar(char chr) {
 }
 
 int FindUppercaseChar(const String &Str, const int StartAt = 0) {
-  char chr;
   for (unsigned int i = StartAt; i < Str.length(); i++)
   {
-    chr = Str.charAt(i);
+    char chr = Str.charAt(i);
     if ((chr >= 65) && (chr <= 90)) // A..Z
     {
       return i;
@@ -193,12 +188,10 @@ char utf8ascii ( char ascii )
 //**************************************************************************************************
 void utf8ascii_ip ( char* s )
 {
-  int  i, k = 0 ;                     // Indexes for in en out string
-  char c ;
-
-  for ( i = 0 ; s[i] ; i++ )          // For every input character
+  int  k = 0 ;                        // Index for out string
+  for (int i = 0 ; s[i] ; i++ )       // For every input character
   {
-    c = utf8ascii ( s[i] ) ;          // Translate if necessary
+    char c = utf8ascii ( s[i] ) ;     // Translate if necessary
     if ( c )                          // Good translation?
     {
       s[k++] = c ;                    // Yes, put in output string
@@ -215,13 +208,10 @@ void utf8ascii_ip ( char* s )
 //**************************************************************************************************
 String utf8ascii ( const char* s )
 {
-  int  i ;                            // Index for input string
-  char c ;
   String res = "" ;                   // Result string
-
-  for ( i = 0 ; s[i] ; i++ )          // For every input character
+  for (int i = 0 ; s[i] ; i++ )       // For every input character
   {
-    c = utf8ascii ( s[i] ) ;          // Translate if necessary
+    char c = utf8ascii ( s[i] ) ;     // Translate if necessary
     if ( c )                          // Good translation?
     {
       res += String ( c ) ;           // Yes, put in output string

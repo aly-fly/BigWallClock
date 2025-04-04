@@ -225,7 +225,7 @@ void MoveConstSpeed (float speed, bool IgnoreLimit)
   dir = speed > 0 ? FWD : REV;
 
   // enable higher power if high speed is requested
-  if ((speedAbs > 0.5) && (!HiPowerMode))
+  if ((speedAbs > 0.3) && (!HiPowerMode))
   {
     driver.setRunKVAL(HIGH_POWER);
     driver.setAccKVAL(HIGH_POWER);
@@ -233,7 +233,7 @@ void MoveConstSpeed (float speed, bool IgnoreLimit)
     driver.setHoldKVAL(HIGH_POWER-15);
     HiPowerMode = true;
   }
-  if ((speedAbs < 0.3) && (HiPowerMode))
+  if ((speedAbs < 0.2) && (HiPowerMode))
   {
     driver.setRunKVAL(LOW_POWER);
     driver.setAccKVAL(LOW_POWER);

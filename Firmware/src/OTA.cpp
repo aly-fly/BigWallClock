@@ -4,6 +4,7 @@
 #include "LED_builtin.h"
 #include "LEDs.h"
 #include "Mqtt_client_HA.h"
+#include "TcpSocket.h"
 
 // hint: for web server version of OTA use: https://github.com/ayushsharma82/ElegantOTA
 
@@ -32,6 +33,7 @@ void OTA_init(void)
 
                        // stop any interrupts or background tasks here...
                        MqttStop();
+                       stopTcpSocket();
                        divisor = 99; // update LEDs imediatelly
                      });
 

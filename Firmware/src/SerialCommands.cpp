@@ -128,11 +128,10 @@ void ReceiveAndProcessSerialCommands(void)
                 bool oldTM = TestMode;
                 TestMode = true; // do not save messages
                 EnableMotor(false);
-                float ClocklPos;
                 for (int i = 0; i < 240; i++)
                 {
                     encoderRead(false);
-                    ClocklPos = ((float)EncoderPosST * 12) / CPR;
+                    float ClocklPos = ((float)EncoderPosST * 12) / CPR;
                     LogNS("Clock position: %.2f\r\n", ClocklPos);
                     delay(1000);
                 }
@@ -158,8 +157,8 @@ void ReceiveAndProcessSerialCommands(void)
                 Log("Free memory: %u bytes", esp_get_free_heap_size());
                 multi_heap_info_t info;
                 heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); // internal RAM, memory capable to store data or to create new task
-                Log("Largest available block: %u bytes", info.largest_free_block);
-                Log("Minimum free ever: %u bytes", info.minimum_free_bytes);
+                Log("Largest available block: %u bytes", (unsigned int)info.largest_free_block);
+                Log("Minimum free ever: %u bytes", (unsigned int)info.minimum_free_bytes);
                 break;
             }
 

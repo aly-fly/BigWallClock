@@ -33,6 +33,22 @@ void startTcpSocket()
 #endif
 }
 
+void stopTcpSocket()
+{
+#ifdef DBG_SOCKET_ENABLED
+LogNS("Debug Socket STOP...\r\n");
+LoopSocketServer();
+  if (SocketClient.connected())
+  {
+    SocketClient.stop();
+    Serial.println("SocketClient Disconnected.");
+  }
+  SocketConnected = false;
+  SocketServer.stop();
+  SocketServer.end();
+#endif
+}
+
 void SendToSocket(String txt)
 {
 #ifdef DBG_SOCKET_ENABLED

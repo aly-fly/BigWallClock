@@ -44,10 +44,9 @@ bool queryEncoder(uint8_t command, uint8_t DataLength, bool printData)
     if (command == 'v')
     {
         dbgStr.clear();
-        char ch;
         for (int i = 0; i < bytesRead; i++)
         {
-            ch = (char)RxBuffer[i];
+            char ch = (char)RxBuffer[i];
             if ((ch >= '!') && (ch <= 'z'))
                 dbgStr.concat(ch);
         }
@@ -272,7 +271,7 @@ bool EncoderSetZeroHere(void)
 
     // Read position
     LogNS("- Read position\r\n");
-    fncRes = encoderRead(true);
+    encoderRead(true);
     delay(10);
     fncRes = encoderRead(true);
     LogNS("  OK : %d\r\n", fncRes);
@@ -294,7 +293,7 @@ bool EncoderSetZeroHere(void)
 
     // Read position
     LogNS("- Read position\r\n");
-    fncRes = encoderRead(true);
+    encoderRead(true);
     delay(10);
     fncRes = encoderRead(true);
     LogNS("  OK : %d\r\n", fncRes);
@@ -318,7 +317,7 @@ bool EncoderSetZeroHere(void)
 
     // Read position
     LogNS("- Read position\r\n");
-    fncRes = encoderRead(true);
+    encoderRead(true);
     fncRes = encoderRead(true);
     LogNS("  OK : %d\r\n", fncRes);
     result = result && fncRes;

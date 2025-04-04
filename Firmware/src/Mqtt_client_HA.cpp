@@ -113,11 +113,31 @@ bool MqttPublish(const char *Topic, const char *Message, const bool Retain)
 
 bool MqttPublish(const char *Topic, JsonDocument *Json, const bool Retain)
 {
-  char buffer[2048];
-  serializeJson(*Json, buffer);
-  bool ok = MqttPublish(Topic, buffer, Retain);
-  Json->clear();
-  return ok;
+  size_t buffSize = measureJson(*Json) + 3; // Discovery Light = about 720 bytes
+#ifdef DEBUG_OUTPUT
+  // LogNS("JSON size = %d\r\n", buffSize);
+#endif
+  char *buffer = (char *)malloc(buffSize);
+  if (buffer == NULL)
+  {
+    Log("Error allocating %d bytes to serialize JSON.", buffSize);
+    return false;
+  }
+  size_t dataSize = serializeJson(*Json, buffer, buffSize);
+  if ((dataSize < buffSize) && (dataSize > 0))
+  {
+    bool ok = MqttPublish(Topic, buffer, Retain);
+    Json->clear();
+    free(buffer);
+    return ok;
+  }
+  else
+  {
+    Log("Error serializing JSON data.");
+    Json->clear();
+    free(buffer);
+    return false;
+  }
 }
 
 void MqttPublishValues(bool forceUpdateEverything)
@@ -647,13 +667,13 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.println("Detected number of commands in MQTT message is lower then 2! -> Ignoring message because it is not valid!");
     return;
   }
-
+#ifdef DEBUG_OUTPUT
   Serial.println();
   Serial.print("RX MQTT: ");
   Serial.print(topic);
   Serial.print(" ");
   Serial.println(message);
-
+#endif
   // resend all discovery messages if HA is restarted
   if (strcmp(topic, TopicHAstatus) == 0 && strcmp(message, "online") == 0)
   {
