@@ -759,6 +759,9 @@ void callback(char *topic, byte *payload, unsigned int length)
 void MqttReportDiscovery(void)
 {
 #ifdef MQTT_HOME_ASSISTANT_DISCOVERY
+  if (!MQTTclient.connected())
+    return;
+    
   if (!discoveryReported)
   {
     if (MqttPublishDiscoveryMessages())

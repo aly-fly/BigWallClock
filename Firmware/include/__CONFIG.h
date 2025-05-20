@@ -43,7 +43,7 @@ decoding of the string: https://www.gnu.org/software/libc/manual/html_node/TZ-Va
 #define MQTT_SAVE_PREFERENCES_AFTER_SEC 30  // auto save config X seconds after last MQTT message received
 
 #define MQTT_REPORT_STATUS_EVERY_SEC    60  // report status to MQTT every X seconds
-#define MQTT_RECONNECT_WAIT_SEC         20  // wait X seconds before trying to reconnect to MQTT broker
+#define MQTT_RECONNECT_WAIT_SEC        120  // wait X seconds before trying to reconnect to MQTT broker
 
 #define MQTT_RETAIN_STATE_MESSAGES      false  // https://www.home-assistant.io/integrations/mqtt/#using-retained-state-messages
 

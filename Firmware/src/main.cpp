@@ -612,8 +612,7 @@ void MainLoopLEDTasks(void)
     else
       LEDcolor = clPINKbright;
 
-    if ((ConfigDotsBrightness < 64) && (ConfigBgBrightness < 64)) // dimming is required
-      adjustColorBrightness(&LEDcolor, 20);
+    adjustColorBrightness(&LEDcolor, ((ConfigDotsBrightness + ConfigBgBrightness) / 2));
 
     LED_showSingleDot(0.00, LEDcolor, false); // just the top one
     if (ClockError || ClockWarning)
