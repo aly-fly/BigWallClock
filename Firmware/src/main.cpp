@@ -338,14 +338,14 @@ void MainLoopClockTasks(void)
   float MotorTemperatureRaw = TempSensorRead();
 
   // low-pass filter
-  if ((abs(MotorTemperatureRaw - MotorTemperatureFiltered) > 7) || (!tempFilterValid))
+  if ((abs(MotorTemperatureRaw - MotorTemperatureFiltered) > 10) || (!tempFilterValid))
   {
     MotorTemperatureFiltered = MotorTemperatureRaw; // pass through - no filter
     tempFilterValid = true;
   }
   else
   {
-    MotorTemperatureFiltered = (MotorTemperatureRaw * 0.04) + (MotorTemperatureFiltered * 0.96);
+    MotorTemperatureFiltered = (MotorTemperatureRaw * 0.03) + (MotorTemperatureFiltered * 0.97);
   }
 
   MotorTemperature = roundToOneDecimal(MotorTemperatureFiltered);
@@ -389,7 +389,8 @@ void MainLoopClockTasks(void)
     ErrorCounter = 0;
   if ((ErrorCounter > 20) && (!ErrorCounterLogged))
   {
-    Log("ErrorCounter increasing! (diff = %.2f min) ", (float)delta * 60 / CPR);
+//  Log("ErrorCounter increasing! (diff = %.2f min) ", (float)delta * 60 / CPR);
+    Log("ErrorCounter increasing!");
     encoderRead(true); // log position
     ErrorCounterLogged = true;
   }
@@ -426,9 +427,12 @@ void MainLoopClockTasks(void)
 
   if (ClockWarning)
   {
+    ClockErrorText.concat("WARNING ");
+    /*
     ClockErrorText.concat("WARNING (diff = ");
     ClockErrorText.concat(round((float)delta * 60 / CPR));
     ClockErrorText.concat(" min) ");
+    */
   }
   if (ClockError)
     ClockErrorText.concat("ERROR ");
