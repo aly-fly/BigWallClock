@@ -255,7 +255,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
   discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicLight);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicLight);
+  discovery["default_entity_id"] = concat4("light.", MQTT_CLIENT, "_", TopicLight);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Back light";
   discovery["icon"] = "mdi:television-ambient-light"; //"mdi:sun-wireless";
@@ -288,7 +288,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
   discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicEffectDuration);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicEffectDuration);
+  discovery["default_entity_id"] = concat4("number.", MQTT_CLIENT, "_", TopicEffectDuration);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Effect duration";
   discovery["icon"] = "mdi:play-speed";
@@ -321,7 +321,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
   discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicDotsBrightness);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicDotsBrightness);
+  discovery["default_entity_id"] = concat4("number.", MQTT_CLIENT, "_", TopicDotsBrightness);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Dots brightness";
   discovery["icon"] = "mdi:dots-circle";
@@ -354,7 +354,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
   discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicRssi);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicRssi);
+  discovery["default_entity_id"] = concat4("sensor.", MQTT_CLIENT, "_", TopicRssi);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "RSSI";
   discovery["icon"] = "mdi:wifi";
@@ -381,7 +381,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
   discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicTemperature);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicTemperature);
+  discovery["default_entity_id"] = concat4("sensor.", MQTT_CLIENT, "_", TopicTemperature);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Motor temperature";
   discovery["icon"] = "mdi:sun-thermometer-outline";
@@ -391,7 +391,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["state_topic"] = concat3(MQTT_CLIENT, "/", TopicTemperature);
   discovery["json_attributes_topic"] = concat3(MQTT_CLIENT, "/", TopicTemperature);
   discovery["value_template"] = "{{ value_json.state }}";
-  discovery["unit_of_measurement"] = "deg C";
+  discovery["unit_of_measurement"] = "°C";
 
   delay(250);
   if (!MqttPublish(concat5("homeassistant/sensor/", MQTT_CLIENT, "_", TopicTemperature, "/sensor/config"), &discovery, MQTT_RETAIN_DISCOVERY_MESSAGES))
@@ -408,7 +408,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
   discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicErrorWarning);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicErrorWarning);
+  discovery["default_entity_id"] = concat4("sensor.", MQTT_CLIENT, "_", TopicErrorWarning);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Error counter";
   discovery["icon"] = "mdi:counter";
@@ -435,7 +435,7 @@ bool MqttPublishDiscoveryMessages()
   discovery["device"]["connections"][0][0] = "mac";
   discovery["device"]["connections"][0][1] = WiFi.macAddress();
   discovery["unique_id"] = concat3(MQTT_CLIENT, "_", TopicErrorText);
-  discovery["object_id"] = concat3(MQTT_CLIENT, "_", TopicErrorText);
+  discovery["default_entity_id"] = concat4("sensor.", MQTT_CLIENT, "_", TopicErrorText);
   discovery["availability_topic"] = concat3(MQTT_CLIENT, "/", MQTT_ALIVE_TOPIC);
   discovery["name"] = "Error descr.";
   discovery["icon"] = "mdi:exclamation-thick";
